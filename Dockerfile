@@ -16,6 +16,10 @@ RUN apt-get update \
     && rm -f /tmp/audiveris.deb \
     && rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends tesseract-ocr \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY server/requirements.txt /app/server/requirements.txt
 RUN python -m pip install --upgrade pip \
@@ -28,5 +32,6 @@ RUN useradd --create-home --home-dir /home/sonora --shell /usr/sbin/nologin sono
 
 USER sonora
 ENV AUDIVERIS_BIN=/opt/audiveris/bin/Audiveris
+ENV TESSDATA_PREFIX=/usr/share/tesseract-ocr/5/tessdata
 EXPOSE 8000
 CMD ["uvicorn", "server.main:app", "--host", "0.0.0.0", "--port", "8000"]
