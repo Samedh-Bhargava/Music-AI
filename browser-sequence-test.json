@@ -1,0 +1,45 @@
+{
+  "format": "sonora-score",
+  "version": 1,
+  "id": "be7e95f0-6f6e-432c-9885-ffb4b710d6b2",
+  "title": "Browser sequence test",
+  "instrument": "Piano",
+  "composer": "",
+  "tempo": 96,
+  "meter": "4/4",
+  "key": "C major",
+  "measureCount": 1,
+  "notes": [
+    {
+      "id": "7dee2eb3-6685-4a88-925d-26192658cc4b",
+      "pitch": "D4",
+      "measure": 1,
+      "beat": 0,
+      "duration": 1,
+      "hand": "R",
+      "finger": "",
+      "dynamic": "mf"
+    },
+    {
+      "id": "9d9bc913-6885-4134-99e6-ff46f95ad39d",
+      "pitch": "D4",
+      "measure": 1,
+      "beat": 1,
+      "duration": 0.5,
+      "hand": "R",
+      "finger": "",
+      "dynamic": "mf"
+    },
+    {
+      "id": "5bade130-7439-4539-81d1-97a2fbdf55e4",
+      "pitch": "Eb4",
+      "measure": 1,
+      "beat": 1.5,
+      "duration": 1.5,
+      "hand": "R",
+      "finger": "",
+      "dynamic": "mf"
+    }
+  ],
+  "updatedAt": "2026-11-08T13:30:45.087Z"
+}

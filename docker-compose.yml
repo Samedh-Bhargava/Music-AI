@@ -1,0 +1,9 @@
+services:
+  sonora:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      AUDIVERIS_BIN: /opt/audiveris/bin/Audiveris
+      SONORA_API_TOKEN: ${SONORA_API_TOKEN:-}
+    restart: unless-stopped

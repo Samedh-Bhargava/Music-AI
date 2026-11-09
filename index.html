@@ -1,0 +1,1429 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7f4">
+  <meta name="description" content="Create, edit, play, and export music scores in your browser.">
+  <title>Sonora — Music score studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1d2925;
+      --muted: #78817b;
+      --line: #e6eae5;
+      --paper: #fff;
+      --wash: #f5f7f4;
+      --green: #2f7459;
+      --green-dark: #245c46;
+      --green-soft: #eaf3ed;
+      --amber: #9c6a24;
+      --amber-soft: #fbf3e7;
+      --red: #a64b46;
+      --red-soft: #fbefed;
+      --serif: Georgia, "Times New Roman", serif;
+      font-family: "DM Sans", sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+    }
+    * { box-sizing: border-box; }
+    body { min-width: 320px; min-height: 100vh; margin: 0; background: var(--wash); color: var(--ink); }
+    button, input, select, textarea { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible { outline: 3px solid #86b89d; outline-offset: 2px; }
+    button:disabled { cursor: not-allowed !important; opacity: .48; }
+    .app { display: grid; min-height: 100vh; grid-template-columns: 220px minmax(0, 1fr); }
+    .sidebar { position: sticky; top: 0; display: flex; height: 100vh; flex-direction: column; padding: 24px 15px 15px; border-right: 1px solid var(--line); background: #fbfcfa; }
+    .brand { display: flex; align-items: center; gap: 9px; padding: 0 9px; color: var(--ink); font: 800 20px "Manrope", sans-serif; letter-spacing: -1px; text-decoration: none; }
+    .brand-mark { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 9px; background: var(--green); color: white; }
+    .brand-mark svg { width: 18px; height: 18px; }
+    .new-button { display: flex; width: 100%; height: 40px; align-items: center; justify-content: center; gap: 8px; margin-top: 31px; border: 0; border-radius: 7px; background: var(--green); color: white; cursor: pointer; font-size: 12px; font-weight: 700; }
+    .new-button:hover, .primary:hover { background: var(--green-dark); }
+    .new-button svg { width: 15px; height: 15px; }
+    .side-label { margin: 31px 10px 9px; color: #a0a8a2; font-size: 9px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+    .nav { display: grid; gap: 4px; }
+    .nav-item { display: flex; min-height: 39px; align-items: center; gap: 10px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: #68736c; cursor: pointer; font-size: 12px; font-weight: 500; text-align: left; }
+    .nav-item svg { width: 16px; height: 16px; color: #87918a; }
+    .nav-item.active { background: var(--green-soft); color: var(--green-dark); font-weight: 700; }
+    .nav-item.active svg { color: var(--green); }
+    .side-projects { min-height: 0; flex: 1; overflow: auto; }
+    .project-shortcut { display: flex; width: 100%; align-items: center; gap: 8px; padding: 8px 10px; overflow: hidden; border: 0; border-radius: 6px; background: transparent; color: #657068; cursor: pointer; font-size: 11px; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+    .project-shortcut:hover, .project-shortcut.current { background: #f0f3ef; color: var(--green-dark); }
+    .project-dot { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: #9bb9a2; }
+    .sidebar-note { padding: 12px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--muted); font-size: 10px; line-height: 1.55; }
+    .sidebar-note b { color: #566158; }
+    main { min-width: 0; }
+    .topbar { position: sticky; z-index: 3; top: 0; display: flex; min-height: 62px; align-items: center; justify-content: space-between; gap: 14px; padding: 0 30px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.92); backdrop-filter: blur(12px); }
+    .crumb { color: #98a09a; font-size: 11px; }
+    .crumb b { color: #59645d; font-weight: 600; }
+    .top-actions { display: flex; align-items: center; gap: 7px; }
+    .save-state { margin-right: 6px; color: #87918a; font-size: 10px; }
+    .save-state::before { display: inline-block; width: 6px; height: 6px; margin: 0 6px 1px 0; border-radius: 50%; background: #78a783; content: ""; }
+    .button { display: inline-flex; min-height: 32px; align-items: center; justify-content: center; gap: 6px; padding: 0 10px; border: 1px solid #dfe5df; border-radius: 6px; background: white; color: #566158; cursor: pointer; font-size: 10px; font-weight: 600; white-space: nowrap; }
+    .button:hover { border-color: #9cbeaa; color: var(--green-dark); }
+    .button svg { width: 14px; height: 14px; }
+    .button.primary { border-color: var(--green); background: var(--green); color: #fff; }
+    .button.danger { color: var(--red); }
+    .content { width: min(1450px, 100%); margin: 0 auto; padding: 28px 30px 60px; }
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 15px; margin-bottom: 20px; }
+    .eyebrow { color: var(--green); font-size: 9px; font-weight: 700; letter-spacing: 1.3px; text-transform: uppercase; }
+    h1 { margin: 7px 0 4px; font: 700 27px "Manrope", sans-serif; letter-spacing: -1.1px; }
+    .subtitle { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+    .card { border: 1px solid var(--line); border-radius: 10px; background: var(--paper); box-shadow: 0 3px 12px rgba(32,48,38,.025); }
+    .toolbar-card { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px 15px; }
+    .project-title-wrap { min-width: 120px; flex: 1; }
+    .field-label { display: block; margin-bottom: 5px; color: #9ba39c; font-size: 9px; font-weight: 600; letter-spacing: .45px; text-transform: uppercase; }
+    .title-input { width: 100%; padding: 0; border: 0; background: transparent; color: var(--ink); font: 700 15px "Manrope", sans-serif; }
+    .title-input:focus { outline-offset: 5px; }
+    .settings { display: flex; align-items: end; gap: 8px; }
+    .setting { width: 91px; }
+    .setting.wide { width: 110px; }
+    .setting input, .setting select { width: 100%; height: 32px; padding: 0 8px; border: 1px solid #e4e9e3; border-radius: 6px; background: #fff; color: #39453d; font-size: 11px; }
+    .editor-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(295px, .75fr); gap: 14px; margin-top: 14px; align-items: start; }
+    .score-card { min-width: 0; overflow: hidden; }
+    .card-head { display: flex; min-height: 52px; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 15px; border-bottom: 1px solid #edf0ec; }
+    .card-head h2 { margin: 0; font: 700 12px "Manrope", sans-serif; }
+    .card-head p { margin: 4px 0 0; color: #929b94; font-size: 10px; }
+    .card-head-actions { display: flex; align-items: center; gap: 6px; }
+    .score-scroll { max-height: 480px; overflow: auto; padding: 14px; background: #fbfcfa; }
+    .measure-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(205px, 1fr)); gap: 10px; }
+    .measure { min-width: 0; padding: 7px 7px 5px; border: 1px solid #e9ece6; border-radius: 6px; background: #fff; transition: border-color .2s, background .2s; }
+    .measure.playing { border-color: #72a284; background: #f1f8f2; }
+    .measure-top { display: flex; justify-content: space-between; margin: 0 3px 2px; color: #9aa198; font-size: 9px; }
+    .measure svg { display: block; width: 100%; height: auto; overflow: visible; }
+    .staff-line { stroke: #d7dcd4; stroke-width: .8; }
+    .bar-line { stroke: #cbd2c8; stroke-width: 1; }
+    .note-head { fill: #34443a; stroke: #34443a; stroke-width: 1; }
+    .note-head.hollow { fill: #fff; }
+    .note-stem { stroke: #34443a; stroke-width: 1.2; }
+    .note-accidental { fill: #59665c; font: 11px Georgia, serif; }
+    .measure-empty { display: grid; height: 157px; place-items: center; color: #a0a8a2; font: italic 12px var(--serif); }
+    .score-meta { display: flex; flex-wrap: wrap; gap: 7px; padding: 10px 14px; border-top: 1px solid #edf0ec; }
+    .meta-chip { padding: 5px 8px; border: 1px solid #e9ece6; border-radius: 5px; background: #fbfcfa; color: #768078; font-size: 9px; }
+    .side-stack { display: grid; gap: 12px; }
+    .notes-card { overflow: hidden; }
+    .note-count { color: #929b94; font-size: 10px; }
+    .notes-scroll { max-height: 362px; overflow: auto; }
+    .notes-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .notes-table th { position: sticky; z-index: 1; top: 0; padding: 8px 5px; background: #fbfcfa; color: #929b94; font-size: 8px; font-weight: 700; letter-spacing: .4px; text-align: left; text-transform: uppercase; }
+    .notes-table td { padding: 6px 4px; border-top: 1px solid #f0f2ef; }
+    .notes-table th:first-child, .notes-table td:first-child { padding-left: 12px; }
+    .notes-table input, .notes-table select { width: 100%; height: 28px; padding: 0 4px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: #445047; font-size: 10px; }
+    .notes-table input:hover, .notes-table select:hover, .notes-table input:focus, .notes-table select:focus { border-color: #dce5dc; background: white; }
+    .notes-table input[type=number] { -moz-appearance: textfield; }
+    .notes-table input::-webkit-outer-spin-button, .notes-table input::-webkit-inner-spin-button { margin: 0; -webkit-appearance: none; }
+    .row-number { color: #a0a8a2; font-size: 9px; }
+    .delete-row { display: grid; width: 25px; height: 25px; place-items: center; border: 0; border-radius: 4px; background: transparent; color: #a7afaa; cursor: pointer; font-size: 15px; }
+    .delete-row:hover { background: var(--red-soft); color: var(--red); }
+    .empty-notes { padding: 23px 15px; color: var(--muted); font-size: 11px; line-height: 1.6; text-align: center; }
+    .notes-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 12px; border-top: 1px solid #edf0ec; }
+    .notice-list { display: grid; gap: 7px; padding: 12px; }
+    .notice-item { display: flex; gap: 8px; padding: 9px; border-radius: 6px; background: var(--amber-soft); color: #755c38; font-size: 10px; line-height: 1.45; }
+    .notice-item.error { background: var(--red-soft); color: #87443f; }
+    .notice-item.ok { background: #eef5ef; color: #4a7055; }
+    .notice-mark { flex: 0 0 auto; font-weight: 700; }
+    .notice-empty { padding: 13px 12px; color: #75867a; font-size: 10px; }
+    .harmony { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px; }
+    .chord-chip { padding: 6px 8px; border: 1px solid #e5ebe4; border-radius: 6px; background: #fafcf9; color: #516153; font-size: 9px; }
+    .chord-chip b { color: var(--green-dark); }
+    .confidence-note { padding: 0 12px 12px; color: #8d978f; font-size: 9px; line-height: 1.5; }
+    .practice-bar { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-top: 1px solid #edf0ec; }
+    .play-button { display: inline-flex; min-width: 88px; height: 32px; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 6px; background: var(--green); color: white; cursor: pointer; font-size: 10px; font-weight: 700; }
+    .play-button:hover { background: var(--green-dark); }
+    .play-button svg { width: 13px; height: 13px; }
+    .volume-range { width: 80px; accent-color: var(--green); }
+    .speed-select { height: 30px; padding: 0 5px; border: 1px solid #e4e9e3; border-radius: 5px; background: #fff; color: #667168; font-size: 9px; }
+    .play-status { min-width: 0; flex: 1; overflow: hidden; color: #8a948c; font-size: 9px; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+    .library-tools { display: flex; gap: 8px; margin-bottom: 14px; }
+    .search-input { min-width: 0; height: 36px; flex: 1; padding: 0 11px; border: 1px solid #e1e7e0; border-radius: 7px; background: white; font-size: 11px; }
+    .library-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 11px; }
+    .project-card { padding: 15px; transition: transform .18s, border-color .18s; }
+    .project-card:hover { transform: translateY(-2px); border-color: #b6cbbb; }
+    .project-card-top { display: flex; justify-content: space-between; gap: 10px; }
+    .project-card h3 { margin: 0; overflow: hidden; font: 700 13px "Manrope", sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+    .project-card-open { display: block; max-width: 100%; padding: 0; overflow: hidden; border: 0; background: transparent; color: var(--ink); cursor: pointer; font: inherit; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+    .project-card-open:hover { color: var(--green-dark); }
+    .project-card p { margin: 6px 0 13px; color: var(--muted); font-size: 10px; }
+    .project-card-meta { display: flex; gap: 6px; }
+    .project-card-meta span { padding: 4px 6px; border-radius: 4px; background: #f4f6f3; color: #77817a; font-size: 9px; }
+    .library-empty { grid-column: 1/-1; padding: 45px 20px; color: var(--muted); text-align: center; }
+    .practice-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, .65fr); gap: 14px; }
+    .practice-notes { display: grid; gap: 6px; max-height: 530px; overflow: auto; padding: 11px; }
+    .practice-note { display: grid; grid-template-columns: 46px 1fr auto; align-items: center; gap: 10px; padding: 10px; border: 1px solid #edf0ec; border-radius: 6px; transition: background .15s, border-color .15s; }
+    .practice-note.active { border-color: #82a98d; background: #eff7f0; }
+    .practice-note b { font: 700 13px "Manrope", sans-serif; }
+    .practice-note span { color: #7e8980; font-size: 10px; }
+    .practice-note small { color: #9aa39b; font-size: 9px; }
+    .practice-tip { padding: 15px; }
+    .practice-tip h2 { margin: 0 0 8px; font: 700 12px "Manrope", sans-serif; }
+    .practice-tip p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.65; }
+    .toast { position: fixed; z-index: 10; right: 20px; bottom: 20px; max-width: min(420px, calc(100vw - 40px)); padding: 11px 14px; border: 1px solid #dfe8df; border-radius: 8px; background: white; box-shadow: 0 8px 26px rgba(24,36,28,.12); color: #405147; font-size: 11px; line-height: 1.5; }
+    .toast[hidden] { display: none; }
+    .ai-status { padding: 5px 8px; border: 1px solid #e6eae5; border-radius: 5px; background: #fff; color: #78817b; font-size: 9px; white-space: nowrap; }
+    .ai-status.ready { border-color: #d7e8d9; background: #f0f7f1; color: #4a7055; }
+    .ai-status.offline { border-color: #f0dfc8; background: #fbf3e7; color: #805c2c; }
+    .discovery-search { display: flex; gap: 8px; }
+    .discovery-search input { min-width: 0; height: 38px; flex: 1; padding: 0 11px; border: 1px solid #e1e7e0; border-radius: 7px; background: white; font-size: 11px; }
+    .discover-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .75fr); gap: 13px; margin-top: 13px; align-items: start; }
+    .search-results { display: grid; gap: 8px; padding: 12px; }
+    .search-result { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid #edf0ec; border-radius: 7px; background: #fff; }
+    .search-result h3 { margin: 0; font: 700 12px "Manrope", sans-serif; }
+    .search-result p { margin: 5px 0 0; color: var(--muted); font-size: 10px; }
+    .search-result a { display: inline-block; margin-top: 8px; color: var(--green); font-size: 10px; font-weight: 600; text-decoration: none; }
+    .search-result a:hover { text-decoration: underline; }
+    .source-tag { flex: 0 0 auto; padding: 4px 6px; border-radius: 4px; background: #f2f5f1; color: #758078; font-size: 8px; }
+    .result-empty { padding: 19px 12px; color: var(--muted); font-size: 10px; line-height: 1.6; }
+    .youtube-preview { display: grid; gap: 9px; padding: 12px; }
+    .youtube-preview iframe { width: 100%; aspect-ratio: 16/9; border: 0; border-radius: 6px; background: #101714; }
+    .youtube-preview h3 { margin: 0; font: 700 12px "Manrope", sans-serif; }
+    .youtube-preview p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+    .api-settings { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; padding: 11px; border: 1px solid #edf0ec; border-radius: 7px; background: #fbfcfa; }
+    .api-settings label { color: #758078; font-size: 9px; font-weight: 600; }
+    .api-settings input { display: block; width: 100%; height: 31px; margin-top: 5px; padding: 0 8px; border: 1px solid #dfe5df; border-radius: 5px; background: #fff; font-size: 10px; }
+    .api-settings .button { align-self: end; justify-self: start; }
+    .analysis-section { display: grid; gap: 9px; padding: 12px; border: 1px solid #edf0ec; border-radius: 7px; }
+    .analysis-section h3 { margin: 0; font: 700 11px "Manrope", sans-serif; }
+    .analysis-settings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .analysis-settings label { color: #758078; font-size: 9px; font-weight: 600; }
+    .analysis-settings input, .analysis-settings select { width: 100%; height: 30px; margin-top: 5px; padding: 0 6px; border: 1px solid #dfe5df; border-radius: 5px; background: #fff; font-size: 10px; }
+    .confidence-badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 7px; border: 1px solid #e5ebe4; border-radius: 5px; background: #fbfcfa; color: #768078; font-size: 9px; }
+    .confidence-badge b { color: var(--green-dark); }
+    dialog { width: min(520px, calc(100vw - 28px)); padding: 0; border: 1px solid var(--line); border-radius: 11px; background: #fff; box-shadow: 0 20px 60px rgba(19,31,23,.18); }
+    dialog::backdrop { background: rgba(26,39,30,.33); backdrop-filter: blur(2px); }
+    .dialog-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; border-bottom: 1px solid #edf0ec; }
+    .dialog-head h2 { margin: 0; font: 700 15px "Manrope", sans-serif; }
+    .icon-button { display: grid; width: 29px; height: 29px; place-items: center; border: 0; border-radius: 5px; background: transparent; color: #77817a; cursor: pointer; font-size: 18px; }
+    .dialog-body { display: grid; gap: 13px; padding: 17px 18px; }
+    .dialog-body label { color: #68736c; font-size: 10px; font-weight: 600; }
+    .dialog-body input:not([type=file]), .dialog-body select, .dialog-body textarea { display: block; width: 100%; margin-top: 6px; padding: 9px 10px; border: 1px solid #dfe5df; border-radius: 6px; background: white; color: #39453d; font-size: 11px; }
+    .dialog-body textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
+    .dialog-help { margin: -4px 0 0; color: #929b94; font-size: 10px; line-height: 1.55; }
+    .file-label { display: inline-flex !important; min-height: 34px; align-items: center; gap: 7px; padding: 0 11px; border: 1px solid #dfe5df; border-radius: 6px; background: #fbfcfa; color: #4c5a50 !important; cursor: pointer; }
+    .file-label input { width: 1px; height: 1px; opacity: 0; position: absolute; }
+    .dialog-foot { display: flex; justify-content: flex-end; gap: 7px; padding: 12px 18px; border-top: 1px solid #edf0ec; }
+    .import-divider { color: #a0a8a2; font-size: 9px; text-align: center; }
+    .error-text { min-height: 15px; color: var(--red); font-size: 10px; }
+    @media (max-width: 1080px) {
+      .app { grid-template-columns: 190px minmax(0, 1fr); }
+      .topbar { padding: 0 20px; }
+      .content { padding: 23px 20px 48px; }
+      .editor-grid { grid-template-columns: minmax(0, 1fr) minmax(275px, .8fr); gap: 10px; }
+      .toolbar-card { flex-wrap: wrap; }
+      .settings { margin-left: auto; }
+    }
+    @media (max-width: 760px) {
+      .app { display: block; padding-bottom: 57px; }
+      .sidebar { position: fixed; z-index: 4; top: auto; right: 0; bottom: 0; left: 0; height: 55px; flex-direction: row; justify-content: center; padding: 5px 10px; border-top: 1px solid var(--line); border-right: 0; background: rgba(255,255,255,.96); backdrop-filter: blur(10px); }
+      .brand, .new-button, .side-label, .side-projects, .sidebar-note { display: none; }
+      .nav { display: flex; width: min(390px, 100%); justify-content: space-around; }
+      .nav-item { min-width: 65px; min-height: 42px; justify-content: center; padding: 0 8px; font-size: 10px; }
+      .nav-item svg { width: 17px; height: 17px; }
+      .topbar { min-height: 53px; padding: 0 13px; }
+      .top-actions { gap: 5px; }
+      .save-state { display: none; }
+      .top-actions .button { min-height: 30px; padding: 0 7px; font-size: 9px; }
+      .content { padding: 20px 12px 35px; }
+      .page-head { align-items: flex-start; }
+      h1 { font-size: 24px; }
+      .subtitle { font-size: 11px; }
+      .editor-grid, .practice-layout { grid-template-columns: 1fr; }
+      .discover-grid { grid-template-columns: 1fr; }
+      .settings { width: 100%; margin-left: 0; overflow-x: auto; }
+      .setting { min-width: 75px; }
+      .setting.wide { min-width: 95px; }
+      .score-scroll { max-height: 390px; padding: 8px; }
+      .measure-grid { grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 7px; }
+      .notes-scroll { max-height: 330px; }
+      .page-head .button { min-height: 30px; }
+    }
+    @media (max-width: 420px) {
+      .crumb { font-size: 10px; }
+      .top-actions .button span { display: none; }
+      .top-actions .button svg { margin: 0; }
+      .toolbar-card { padding: 11px; }
+      .project-title-wrap { min-width: 100%; }
+      .settings { gap: 5px; }
+      .setting { min-width: 66px; width: 74px; }
+      .setting.wide { min-width: 85px; width: 90px; }
+      .measure-grid { grid-template-columns: 1fr; }
+      .api-settings { grid-template-columns: 1fr; }
+      .analysis-settings { grid-template-columns: 1fr 1fr; }
+      .measure svg { max-height: 170px; }
+      .practice-bar { gap: 6px; padding: 10px; }
+      .play-status { max-width: 82px; }
+    }
+    @media print {
+      body { background: white; }
+      .sidebar, .topbar, .page-head, .toolbar-card, .side-stack, .practice-bar, .notes-actions, .toast, dialog { display: none !important; }
+      .app { display: block; }
+      .content { width: 100%; padding: 0; }
+      .editor-grid { display: block; margin: 0; }
+      .score-card { border: 0; box-shadow: none; }
+      .score-scroll { max-height: none; overflow: visible; }
+      .measure-grid { grid-template-columns: repeat(2, 1fr); }
+      .measure { break-inside: avoid; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" aria-label="Main navigation">
+      <a class="brand" href="#" aria-label="Sonora Studio home">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M9 18V5l11-2v13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="6" cy="18" rx="3" ry="2.2" fill="currentColor"/><ellipse cx="17" cy="16" rx="3" ry="2.2" fill="currentColor"/></svg></span>
+        <span>sonora</span>
+      </a>
+      <button class="new-button" type="button" data-action="new-project"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>New score</button>
+      <div class="side-label">Workspace</div>
+      <nav class="nav" aria-label="Workspace">
+        <button class="nav-item active" type="button" data-view="studio" aria-label="Studio"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H10v7H4V5.5ZM14 4h4.5A1.5 1.5 0 0 1 20 5.5V9h-6V4ZM4 15h6v5H5.5A1.5 1.5 0 0 1 4 18.5V15ZM14 13h6v5.5a1.5 1.5 0 0 1-1.5 1.5H14v-7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span>Studio</span></button>
+        <button class="nav-item" type="button" data-view="library" aria-label="My scores"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4.5h11.5L20 8v11.5H5V4.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M15.5 4.5V9H20M8 13h9M8 16h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>My scores</span></button>
+        <button class="nav-item" type="button" data-view="practice" aria-label="Practice"><svg viewBox="0 0 24 24" fill="none"><path d="M9 18V5l11-2v13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="6" cy="18" rx="3" ry="2.2" fill="currentColor"/><ellipse cx="17" cy="16" rx="3" ry="2.2" fill="currentColor"/></svg><span>Practice</span></button>
+        <button class="nav-item" type="button" data-view="discover" aria-label="Discover"><svg viewBox="0 0 24 24" fill="none"><circle cx="10.8" cy="10.8" r="6.8" stroke="currentColor" stroke-width="1.6"/><path d="m16 16 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Discover</span></button>
+      </nav>
+      <div class="side-label">Recent scores</div>
+      <div class="side-projects" id="recent-projects"></div>
+      <div class="sidebar-note"><b>Saved on this device.</b><br>Your scores stay in this browser. Export a backup JSON to move them.</div>
+    </aside>
+    <main>
+      <header class="topbar">
+        <div class="crumb">Sonora&nbsp; / &nbsp;<b id="breadcrumb">Studio</b></div>
+        <div class="top-actions">
+          <span class="save-state" id="save-state" role="status">Saved on this device</span>
+          <span class="ai-status offline" id="ai-status">Local AI offline</span>
+          <button class="button" type="button" data-action="open-analysis">Analyze</button>
+          <button class="button" type="button" data-action="import" aria-label="Import score"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14.5v4A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5v-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Import</span></button>
+          <button class="button primary" type="button" data-action="export-menu" aria-label="Export score"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v12m0 0 4-4m-4 4-4-4M5 20h14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Export</span></button>
+        </div>
+      </header>
+      <div class="content" id="view-root"></div>
+    </main>
+  </div>
+  <dialog id="project-dialog">
+    <form id="project-form">
+      <div class="dialog-head"><h2>Create a score</h2><button class="icon-button" type="button" data-action="close-dialog" aria-label="Close">×</button></div>
+      <div class="dialog-body">
+        <label>Score title<input id="new-title" name="title" maxlength="100" required value="Untitled score"></label>
+        <label>Instrument<select id="new-instrument" name="instrument"><option value="Piano">Piano</option><option value="Guitar">Guitar</option><option value="Violin">Violin</option><option value="Flute">Flute</option><option value="Other">Other / ensemble</option></select></label>
+        <p class="dialog-help">Start with an empty score. Add notes by hand, or import a MusicXML or Sonora JSON file.</p>
+        <div class="error-text" id="project-error" role="status"></div>
+      </div>
+      <div class="dialog-foot"><button class="button" type="button" data-action="close-dialog">Cancel</button><button class="button primary" type="submit">Create score</button></div>
+    </form>
+  </dialog>
+  <dialog id="analysis-dialog">
+    <div class="dialog-head"><h2>Analyze with local AI</h2><button class="icon-button" type="button" data-action="close-dialog" aria-label="Close">×</button></div>
+    <div class="dialog-body">
+      <p class="dialog-help">Your file is sent only to the Sonora server you configure. Sheet recognition uses Audiveris; audio transcription uses Spotify Basic Pitch. First model use may take a few minutes.</p>
+      <section class="analysis-section">
+        <h3>Choose input and settings</h3>
+        <label class="file-label">Choose score image, PDF, or audio<input id="analysis-file" type="file" accept="image/*,.pdf,audio/*,.wav,.mp3,.m4a,.flac,.ogg,.aiff"></label>
+        <div class="analysis-settings">
+          <label>Input type<select id="analysis-kind"><option value="score">Sheet image / PDF</option><option value="audio">Audio recording</option></select></label>
+          <label>Tempo · BPM<input id="analysis-tempo" type="number" min="30" max="240" value="120"></label>
+          <label>Time signature<select id="analysis-meter"><option>4/4</option><option>3/4</option><option>2/4</option><option>6/8</option><option>5/4</option><option>7/8</option></select></label>
+          <label>Instrument<select id="analysis-instrument"><option>Piano</option><option>Guitar</option><option>Violin</option><option>Flute</option><option>Other</option></select></label>
+        </div>
+        <button class="button primary" type="button" data-action="run-analysis">Recognize score</button>
+        <div class="error-text" id="analysis-error" role="status"></div>
+      </section>
+      <section class="analysis-section">
+        <h3>Connect your local or deployed backend</h3>
+        <div class="api-settings">
+          <label>Server URL<input id="api-base" type="url" autocomplete="url" placeholder="http://127.0.0.1:8000"></label>
+          <label>Server access token<input id="api-token" type="password" autocomplete="off" placeholder="Optional; stored for this tab"></label>
+          <button class="button" type="button" data-action="save-api-config">Save &amp; check connection</button>
+        </div>
+        <p class="dialog-help">The access token is kept in this tab only. Do not expose an unauthenticated analysis server to the public internet.</p>
+      </section>
+    </div>
+    <div class="dialog-foot"><button class="button" type="button" data-action="close-dialog">Close</button></div>
+  </dialog>
+  <dialog id="import-dialog">
+    <div class="dialog-head"><h2>Import a score</h2><button class="icon-button" type="button" data-action="close-dialog" aria-label="Close">×</button></div>
+    <div class="dialog-body">
+      <p class="dialog-help">Import an uncompressed MusicXML (.musicxml or .xml) score, or a Sonora JSON backup. These files are read in this browser and are not uploaded. Use <b>Analyze</b> for score images/PDFs or audio with the local model server.</p>
+      <label class="file-label">Choose MusicXML or JSON file<input id="import-file" type="file" accept=".musicxml,.xml,.json,application/vnd.recordare.musicxml+xml,application/json"></label>
+      <div class="import-divider">OR ENTER A NOTE SEQUENCE</div>
+      <label for="sequence-input">Notes in order<input id="sequence-input" type="text" placeholder="C4:1 D4:1 E4:1 G4:2"></label>
+      <p class="dialog-help">Use note names and durations in quarter-note beats, for example: C4:1 D4:0.5 E♭4:1.5. Imported notes go into the current score.</p>
+      <div class="error-text" id="import-error" role="status"></div>
+    </div>
+    <div class="dialog-foot"><button class="button" type="button" data-action="close-dialog">Cancel</button><button class="button primary" type="button" data-action="import-sequence">Add notes</button></div>
+  </dialog>
+  <dialog id="export-dialog">
+    <div class="dialog-head"><h2>Export your score</h2><button class="icon-button" type="button" data-action="close-dialog" aria-label="Close">×</button></div>
+    <div class="dialog-body">
+      <p class="dialog-help">Choose an interoperable file format. MIDI and MusicXML preserve note pitches, measures, timing, dynamics, and score settings.</p>
+      <button class="button" type="button" data-action="export-musicxml">Download MusicXML (.musicxml)</button>
+      <button class="button" type="button" data-action="export-midi">Download MIDI (.mid)</button>
+      <button class="button" type="button" data-action="export-json">Download Sonora backup (.json)</button>
+      <button class="button" type="button" data-action="print">Print / Save as PDF</button>
+      <div class="error-text" id="export-error" role="status"></div>
+    </div>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <script>
+    (() => {
+      "use strict";
+      const STORAGE_KEY = "sonora.score-studio.v1";
+      const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+      const NOTE_OPTIONS = [];
+      for (let octave = 0; octave <= 8; octave++) {
+        for (const pitch of NOTE_NAMES) NOTE_OPTIONS.push(`${pitch}${octave}`);
+      }
+      const DURATIONS = [
+        ["0.25", "1/16"], ["0.5", "1/8"], ["0.75", "Dotted 1/8"],
+        ["1", "1/4"], ["1.5", "Dotted 1/4"], ["2", "1/2"],
+        ["3", "Dotted 1/2"], ["4", "Whole"]
+      ];
+      const DYNAMICS = ["pp", "p", "mp", "mf", "f", "ff"];
+      const VELOCITIES = { pp: 34, p: 48, mp: 64, mf: 80, f: 98, ff: 114 };
+      const RANGES = { Piano: [21, 108], Guitar: [40, 88], Violin: [55, 103], Flute: [60, 96], Other: [0, 127] };
+      const KEY_FIFTHS = { "C major": 0, "G major": 1, "D major": 2, "A major": 3, "E major": 4, "B major": 5, "F# major": 6, "C# major": 7, "F major": -1, "Bb major": -2, "Eb major": -3, "Ab major": -4, "Db major": -5, "Gb major": -6, "Cb major": -7, "A minor": 0, "E minor": 1, "B minor": 2, "F# minor": 3, "C# minor": 4, "G# minor": 5, "D# minor": 6, "A# minor": 7, "D minor": -1, "G minor": -2, "C minor": -3, "F minor": -4, "Bb minor": -5, "Eb minor": -6, "Ab minor": -7 };
+      const state = { projects: [], currentId: null, view: "studio", filter: "", undo: [], redo: [], audio: null, sources: [], playTimer: null, stopTimer: null, playing: false, playStarted: 0, playLength: 0, toastTimer: null, apiHealth: null };
+      const $ = selector => document.querySelector(selector);
+      const $$ = selector => Array.from(document.querySelectorAll(selector));
+      const uid = () => globalThis.crypto && typeof globalThis.crypto.randomUUID === "function" ? globalThis.crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+      const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+      const current = () => state.projects.find(project => project.id === state.currentId) || null;
+      const noteMidi = pitch => {
+        const match = /^([A-G])([#b]?)(-?\d+)$/.exec(String(pitch));
+        if (!match) return null;
+        const base = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 }[match[1]];
+        const accidental = match[2] === "#" ? 1 : match[2] === "b" ? -1 : 0;
+        const midi = (Number(match[3]) + 1) * 12 + base + accidental;
+        return midi >= 0 && midi <= 127 ? midi : null;
+      };
+      const pitchFromMidi = midi => `${NOTE_NAMES[((midi % 12) + 12) % 12]}${Math.floor(midi / 12) - 1}`;
+      const beatsInBar = project => {
+        const [numerator, denominator] = String(project.meter || "4/4").split("/").map(Number);
+        return numerator * 4 / denominator;
+      };
+      const sortedNotes = project => [...project.notes].sort((a, b) => a.measure - b.measure || a.beat - b.beat || (noteMidi(a.pitch) || 0) - (noteMidi(b.pitch) || 0));
+      const defaultProject = () => ({
+        id: uid(), title: "Evening Arpeggio", instrument: "Piano", composer: "",
+        tempo: 84, meter: "4/4", key: "C major", measureCount: 2,
+        notes: [
+          { id: uid(), pitch: "C4", measure: 1, beat: 0, duration: 1, hand: "R", finger: 1, dynamic: "mp" },
+          { id: uid(), pitch: "E4", measure: 1, beat: 1, duration: 1, hand: "R", finger: 2, dynamic: "mp" },
+          { id: uid(), pitch: "G4", measure: 1, beat: 2, duration: 1, hand: "R", finger: 3, dynamic: "mp" },
+          { id: uid(), pitch: "C5", measure: 1, beat: 3, duration: 1, hand: "R", finger: 5, dynamic: "mp" },
+          { id: uid(), pitch: "A3", measure: 2, beat: 0, duration: 1, hand: "L", finger: 5, dynamic: "mf" },
+          { id: uid(), pitch: "C4", measure: 2, beat: 1, duration: 1, hand: "R", finger: 1, dynamic: "mf" },
+          { id: uid(), pitch: "E4", measure: 2, beat: 2, duration: 2, hand: "R", finger: 3, dynamic: "mf" }
+        ]
+      });
+
+      function normalizeProject(value) {
+        if (!value || typeof value !== "object" || !Array.isArray(value.notes)) throw new Error("This file is not a valid Sonora score.");
+        const notes = value.notes.map(note => {
+          const pitch = String(note.pitch || "C4");
+          const midi = noteMidi(pitch);
+          const measure = Number(note.measure || 1);
+          const beat = Number(note.beat || 0);
+          const duration = Number(note.duration || 1);
+          if (midi === null || !Number.isInteger(measure) || measure < 1 || measure > 256 || !Number.isFinite(beat) || beat < 0 || beat > 32 || !Number.isFinite(duration) || duration <= 0 || duration > 16) {
+            throw new Error("The score contains an invalid pitch, measure, beat, or duration.");
+          }
+          return {
+            id: uid(), pitch, measure, beat, duration,
+            hand: note.hand === "L" || Number(note.staff) === 2 ? "L" : "R",
+            finger: note.finger === "" || note.finger == null ? "" : Math.min(5, Math.max(1, Number(note.finger) || 1)),
+            dynamic: DYNAMICS.includes(note.dynamic) ? note.dynamic : "mf",
+            confidence: note.confidence != null && Number.isFinite(Number(note.confidence)) ? Math.max(0, Math.min(1, Number(note.confidence))) : null
+          };
+        });
+        if (notes.length > 5000) throw new Error("A score can contain at most 5,000 notes.");
+        const measureCount = Math.max(1, Number(value.measureCount) || 0, ...notes.map(note => note.measure));
+        return {
+          id: uid(), title: String(value.title || "Imported score").slice(0, 100),
+          instrument: ["Piano", "Guitar", "Violin", "Flute", "Other"].includes(value.instrument) ? value.instrument : "Piano",
+          composer: String(value.composer || "").slice(0, 100),
+          tempo: Math.min(240, Math.max(30, Math.round(Number(value.tempo) || 96))),
+          meter: /^\d{1,2}\/(1|2|4|8|16)$/.test(String(value.meter)) ? value.meter : "4/4",
+          key: KEY_FIFTHS[String(value.key)] !== undefined ? String(value.key) : "C major",
+          measureCount, notes,
+          analysis: value.analysis && typeof value.analysis === "object" ? value.analysis : null,
+          source: value.source && typeof value.source === "object" ? value.source : null
+        };
+      }
+
+      function persist() {
+        try {
+          const project = current();
+          if (project) project.updatedAt = new Date().toISOString();
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ projects: state.projects, currentId: state.currentId }));
+          $("#save-state").textContent = "Saved on this device";
+        } catch (error) {
+          $("#save-state").textContent = "Could not save";
+          showToast(`Could not save to this browser: ${error.message}`);
+        }
+      }
+      function loadState() {
+        try {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+            const data = JSON.parse(stored);
+            if (data && Array.isArray(data.projects)) {
+              state.projects = data.projects.map(project => normalizeStoredProject(project));
+              state.currentId = state.projects.some(project => project.id === data.currentId) ? data.currentId : (state.projects[0]?.id || null);
+            }
+          }
+        } catch (error) {
+          showToast(`Saved scores could not be loaded: ${error.message}`);
+        }
+        if (!state.projects.length) {
+          const project = defaultProject();
+          state.projects = [project];
+          state.currentId = project.id;
+          persist();
+        }
+      }
+      function normalizeStoredProject(project) {
+        const normalized = normalizeProject(project);
+        normalized.id = String(project.id || normalized.id);
+        normalized.title = String(project.title || normalized.title).slice(0, 100);
+        normalized.updatedAt = project.updatedAt || "";
+        return normalized;
+      }
+      function defaultApiBase() {
+        return window.location.protocol === "file:" ? "http://127.0.0.1:8000" : window.location.origin;
+      }
+      function apiBase() {
+        return (sessionStorage.getItem("sonora.api-base") || defaultApiBase()).replace(/\/+$/, "");
+      }
+      async function apiRequest(path, options = {}) {
+        const headers = new Headers(options.headers || {});
+        const token = sessionStorage.getItem("sonora.api-token");
+        if (token) headers.set("X-API-Key", token);
+        let response;
+        try {
+          response = await fetch(`${apiBase()}${path}`, { ...options, headers });
+        } catch (error) {
+          throw new Error(`Could not reach the Sonora server at ${apiBase()}. Start the backend or check the server URL. ${error.message}`);
+        }
+        let data;
+        try { data = await response.json(); }
+        catch (_) { data = {}; }
+        if (!response.ok) throw new Error(data.detail || `The Sonora server returned HTTP ${response.status}.`);
+        return data;
+      }
+      async function checkBackend() {
+        const badge = $("#ai-status");
+        try {
+          const health = await apiRequest("/api/health");
+          state.apiHealth = health;
+          const score = health.models?.score_ocr?.available;
+          const audio = health.models?.audio_transcription?.available;
+          badge.textContent = score && audio ? "Local AI ready" : score || audio ? `${score ? "Score OCR" : "Audio model"} ready` : "Models unavailable";
+          badge.classList.toggle("ready", Boolean(score || audio));
+          badge.classList.toggle("offline", !score && !audio);
+          return true;
+        } catch (_) {
+          state.apiHealth = null;
+          badge.textContent = "Local AI offline";
+          badge.classList.remove("ready");
+          badge.classList.add("offline");
+          return false;
+        }
+      }
+      function configureApiFields() {
+        $("#api-base").value = sessionStorage.getItem("sonora.api-base") || defaultApiBase();
+        $("#api-token").value = sessionStorage.getItem("sonora.api-token") || "";
+      }
+      async function saveApiConfig() {
+        const rawBase = $("#api-base").value.trim();
+        let parsed;
+        try { parsed = new URL(rawBase); }
+        catch (_) { throw new Error("Enter a valid server URL, such as http://127.0.0.1:8000."); }
+        if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password) {
+          throw new Error("Use an HTTP(S) server URL without embedded credentials.");
+        }
+        const base = `${parsed.origin}${parsed.pathname.replace(/\/+$/, "")}`;
+        sessionStorage.setItem("sonora.api-base", base);
+        sessionStorage.setItem("sonora.api-token", $("#api-token").value);
+        if (!await checkBackend()) throw new Error("Could not connect to that Sonora server. Check the URL and confirm the server is running.");
+        showToast("Sonora server connected. Model availability is shown at the top of the app.");
+      }
+      async function runAnalysis() {
+        const file = $("#analysis-file").files?.[0];
+        const kind = $("#analysis-kind").value;
+        const errorNode = $("#analysis-error");
+        const button = document.querySelector('[data-action="run-analysis"]');
+        errorNode.textContent = "";
+        if (!file) { errorNode.textContent = "Choose a score image, PDF, or audio file first."; return; }
+        if (file.size > 25 * 1024 * 1024) { errorNode.textContent = "Files are limited to 25 MB."; return; }
+        const extension = file.name.split(".").pop().toLowerCase();
+        const scoreExtensions = ["png", "jpg", "jpeg", "tif", "tiff", "bmp", "pdf"];
+        const audioExtensions = ["wav", "mp3", "m4a", "flac", "ogg", "aiff", "aif"];
+        if (kind === "score" && !scoreExtensions.includes(extension)) { errorNode.textContent = "For score recognition, choose an image or PDF file."; return; }
+        if (kind === "audio" && !audioExtensions.includes(extension)) { errorNode.textContent = "For audio transcription, choose a WAV, MP3, M4A, FLAC, OGG, or AIFF file."; return; }
+        const form = new FormData();
+        form.append("file", file);
+        form.append("tempo", $("#analysis-tempo").value || "120");
+        form.append("meter", $("#analysis-meter").value);
+        form.append("instrument", $("#analysis-instrument").value);
+        if (kind === "audio") form.append("title", file.name.replace(/\.[^.]+$/, ""));
+        button.disabled = true;
+        button.textContent = kind === "score" ? "Recognizing notation…" : "Transcribing audio…";
+        try {
+          const response = await apiRequest(kind === "score" ? "/api/analyze/score" : "/api/analyze/audio", { method: "POST", body: form });
+          const project = normalizeProject(response.score);
+          project.analysis = response.confidence || null;
+          project.source = response.source || { kind };
+          if (state.projects.length >= 100) throw new Error("This browser library already has 100 scores. Delete one before analyzing another.");
+          state.projects.unshift(project);
+          state.currentId = project.id;
+          state.view = "studio";
+          state.undo = [];
+          state.redo = [];
+          persist();
+          closeDialogs();
+          render();
+          showToast(`${project.notes.length} notes recognized. Review the confidence and score checks before relying on the result.`);
+          await checkBackend();
+        } catch (error) {
+          errorNode.textContent = error.message;
+        } finally {
+          button.disabled = false;
+          button.textContent = "Recognize score";
+        }
+      }
+      async function searchCatalog() {
+        const input = $("#catalog-query");
+        const resultNode = $("#catalog-results");
+        const button = document.querySelector('[data-action="search-catalog"]');
+        const query = input?.value.trim();
+        if (!query || query.length < 2) {
+          resultNode.innerHTML = `<div class="result-empty">Enter at least two characters to search.</div>`;
+          return;
+        }
+        button.disabled = true;
+        button.textContent = "Searching…";
+        resultNode.innerHTML = `<div class="result-empty">Searching music catalogs…</div>`;
+        try {
+          const response = await apiRequest(`/api/search?q=${encodeURIComponent(query)}`);
+          const results = response.results || [];
+          const entries = results.map(item => `<article class="search-result"><div><h3>${esc(item.title)}</h3><p>${esc(item.artist || item.source)}${item.year ? ` · ${esc(item.year)}` : ""}</p><a href="${esc(item.url)}" target="_blank" rel="noopener noreferrer">Open ${esc(item.source)} ↗</a></div><span class="source-tag">${esc(item.kind || item.source)}</span></article>`).join("");
+          const warnings = (response.warnings || []).map(warning => `<div class="notice-item">${esc(warning)}</div>`).join("");
+          resultNode.innerHTML = `${warnings}${entries || `<div class="result-empty">No matches found. Try a shorter title or composer name.</div>`}<p class="dialog-help">Catalog results link to their original source. Check each item's rights and availability before use.</p>`;
+        } catch (error) {
+          resultNode.innerHTML = `<div class="notice-item error">${esc(error.message)}</div>`;
+        } finally {
+          button.disabled = false;
+          button.textContent = "Search catalogs";
+        }
+      }
+      async function lookupYouTube() {
+        const input = $("#youtube-url");
+        const resultNode = $("#youtube-result");
+        const button = document.querySelector('[data-action="youtube-lookup"]');
+        const value = input?.value.trim();
+        if (!value) {
+          resultNode.innerHTML = `<div class="result-empty">Paste a YouTube video link first.</div>`;
+          return;
+        }
+        button.disabled = true;
+        button.textContent = "Looking up…";
+        resultNode.innerHTML = `<div class="result-empty">Looking up video details…</div>`;
+        try {
+          const response = await apiRequest(`/api/youtube?url=${encodeURIComponent(value)}`);
+          resultNode.innerHTML = `<iframe title="${esc(response.title)}" src="${esc(response.embedUrl)}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe><h3>${esc(response.title)}</h3><p>${esc(response.author || "")}</p><p>${esc(response.analysisNote)}</p><a href="${esc(response.url)}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>`;
+        } catch (error) {
+          resultNode.innerHTML = `<div class="notice-item error">${esc(error.message)}</div>`;
+        } finally {
+          button.disabled = false;
+          button.textContent = "Preview link";
+        }
+      }
+      function showToast(message) {
+        const toast = $("#toast");
+        toast.textContent = message;
+        toast.hidden = false;
+        clearTimeout(state.toastTimer);
+        state.toastTimer = setTimeout(() => { toast.hidden = true; }, 4200);
+      }
+      function snapshot() {
+        const project = current();
+        if (!project) return;
+        state.undo.push(JSON.stringify(project));
+        if (state.undo.length > 40) state.undo.shift();
+        state.redo = [];
+      }
+      function applyHistory(from, to) {
+        const value = from.pop();
+        if (!value) return;
+        const project = current();
+        if (!project) return;
+        to.push(JSON.stringify(project));
+        const restored = JSON.parse(value);
+        const index = state.projects.findIndex(item => item.id === state.currentId);
+        state.projects[index] = restored;
+        persist();
+        render();
+      }
+      function openDialog(id) {
+        const dialog = document.getElementById(id);
+        if (dialog && typeof dialog.showModal === "function") dialog.showModal();
+      }
+      function closeDialogs() { $$("dialog[open]").forEach(dialog => dialog.close()); }
+      function escXml(value) { return String(value ?? "").replace(/[<>&'"]/g, char => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", "'": "&apos;", '"': "&quot;" }[char])); }
+      function projectFileName(project, extension) {
+        const base = project.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 50) || "sonora-score";
+        return `${base}.${extension}`;
+      }
+      function download(blob, fileName) {
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement("a");
+        anchor.href = url;
+        anchor.download = fileName;
+        document.body.append(anchor);
+        anchor.click();
+        anchor.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+      function exportJson() {
+        const project = current();
+        if (!project) return;
+        const data = { format: "sonora-score", version: 1, ...project };
+        download(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }), projectFileName(project, "json"));
+        closeDialogs();
+        showToast("Sonora JSON backup downloaded.");
+      }
+      function xmlPitch(pitch) {
+        const match = /^([A-G])([#b]?)(-?\d+)$/.exec(pitch);
+        if (!match) throw new Error(`Invalid pitch: ${pitch}`);
+        return `<pitch><step>${match[1]}</step>${match[2] === "#" ? "<alter>1</alter>" : match[2] === "b" ? "<alter>-1</alter>" : ""}<octave>${match[3]}</octave></pitch>`;
+      }
+      function noteType(duration) {
+        if (duration <= .26) return "16th";
+        if (duration <= .76) return "eighth";
+        if (duration <= 1.01) return "quarter";
+        if (duration <= 1.51) return "quarter";
+        if (duration <= 2.01) return "half";
+        if (duration <= 3.01) return "half";
+        return "whole";
+      }
+      function noteDot(duration) {
+        return Math.abs(duration - .75) < .001 || Math.abs(duration - 1.5) < .001 || Math.abs(duration - 3) < .001 ? "<dot/>" : "";
+      }
+      function musicXml(project) {
+        const divisions = 480;
+        const barBeats = beatsInBar(project);
+        const maxMeasure = Math.max(project.measureCount, ...project.notes.map(note => note.measure), 1);
+        const notesByMeasure = new Map();
+        for (const note of project.notes) {
+          if (!notesByMeasure.has(note.measure)) notesByMeasure.set(note.measure, []);
+          notesByMeasure.get(note.measure).push(note);
+        }
+        const fifths = KEY_FIFTHS[project.key] ?? 0;
+        const grandStaff = project.instrument === "Piano";
+        const [beats, beatType] = project.meter.split("/");
+        const measureXml = [];
+        for (let measureNumber = 1; measureNumber <= maxMeasure; measureNumber++) {
+          const notes = (notesByMeasure.get(measureNumber) || []).slice().sort((a, b) => a.beat - b.beat || (noteMidi(a.pitch) || 0) - (noteMidi(b.pitch) || 0));
+          const groups = new Map();
+          for (const note of notes) {
+            const at = Math.round(note.beat * divisions);
+            if (!groups.has(at)) groups.set(at, []);
+            groups.get(at).push(note);
+          }
+          let cursor = 0;
+          const body = [];
+          for (const [at, group] of [...groups.entries()].sort((a, b) => a[0] - b[0])) {
+            if (at > cursor) {
+              body.push(`<note><rest/><duration>${at - cursor}</duration><voice>1</voice><type>${noteType((at - cursor) / divisions)}</type><staff>1</staff></note>`);
+              cursor = at;
+            } else if (at < cursor) {
+              body.push(`<backup><duration>${cursor - at}</duration></backup>`);
+              cursor = at;
+            }
+            const groupDuration = Math.max(...group.map(note => Math.max(1, Math.round(note.duration * divisions))));
+            const dynamic = DYNAMICS.includes(group[0].dynamic) ? group[0].dynamic : "mf";
+            const dynamicStaff = grandStaff && group[0].hand === "L" ? 2 : 1;
+            body.push(`<direction placement="below"><direction-type><dynamics><${dynamic}/></dynamics></direction-type><staff>${dynamicStaff}</staff></direction>`);
+            group.forEach((note, index) => {
+              const fingering = note.finger ? `<notations><technical><fingering>${escXml(note.finger)}</fingering></technical></notations>` : "";
+              const staff = grandStaff && note.hand === "L" ? 2 : 1;
+              body.push(`<note>${index ? "<chord/>" : ""}${xmlPitch(note.pitch)}<duration>${Math.max(1, Math.round(note.duration * divisions))}</duration><voice>1</voice><type>${noteType(note.duration)}</type>${noteDot(note.duration)}<staff>${staff}</staff>${fingering}</note>`);
+            });
+            cursor = Math.max(cursor, at + groupDuration);
+          }
+          const end = Math.round(barBeats * divisions);
+          if (cursor < end) body.push(`<note><rest/><duration>${end - cursor}</duration><voice>1</voice><type>${noteType((end - cursor) / divisions)}</type><staff>1</staff></note>`);
+          const clefs = grandStaff ? `<staves>2</staves><clef number="1"><sign>G</sign><line>2</line></clef><clef number="2"><sign>F</sign><line>4</line></clef>` : `<clef><sign>G</sign><line>2</line></clef>`;
+          const attributes = measureNumber === 1 ? `<attributes><divisions>${divisions}</divisions><key><fifths>${fifths}</fifths><mode>${project.key.toLowerCase().includes("minor") ? "minor" : "major"}</mode></key><time><beats>${beats}</beats><beat-type>${beatType}</beat-type></time>${clefs}</attributes><direction placement="above"><direction-type><metronome><beat-unit>quarter</beat-unit><per-minute>${project.tempo}</per-minute></metronome></direction-type><sound tempo="${project.tempo}"/></direction>` : "";
+          measureXml.push(`<measure number="${measureNumber}">${attributes}${body.join("")}</measure>`);
+        }
+        return `<?xml version="1.0" encoding="UTF-8" standalone="no"?><score-partwise version="3.1"><work><work-title>${escXml(project.title)}</work-title></work><identification><creator type="composer">${escXml(project.composer)}</creator><encoding><software>Sonora Score Studio</software></encoding></identification><part-list><score-part id="P1"><part-name>${escXml(project.instrument)}</part-name></score-part></part-list><part id="P1">${measureXml.join("")}</part></score-partwise>`;
+      }
+      function exportMusicXml() {
+        const project = current();
+        if (!project) return;
+        try {
+          download(new Blob([musicXml(project)], { type: "application/vnd.recordare.musicxml+xml;charset=utf-8" }), projectFileName(project, "musicxml"));
+          closeDialogs();
+          showToast("MusicXML score downloaded.");
+        } catch (error) {
+          $("#export-error").textContent = error.message;
+        }
+      }
+      function variableLength(value) {
+        let number = Math.max(0, Math.floor(value));
+        const bytes = [number & 0x7f];
+        while ((number >>= 7) > 0) bytes.unshift((number & 0x7f) | 0x80);
+        return bytes;
+      }
+      function uint32(value) { return [(value >>> 24) & 255, (value >>> 16) & 255, (value >>> 8) & 255, value & 255]; }
+      function midiFile(project) {
+        const ppq = 480;
+        const micros = Math.round(60000000 / project.tempo);
+        const [numerator, denominator] = project.meter.split("/").map(Number);
+        const power = Math.max(0, Math.round(Math.log2(denominator)));
+        const events = [
+          { tick: 0, priority: 0, bytes: [0xff, 0x51, 0x03, (micros >> 16) & 255, (micros >> 8) & 255, micros & 255] },
+          { tick: 0, priority: 0, bytes: [0xff, 0x58, 0x04, numerator & 255, power & 255, 24, 8] }
+        ];
+        for (const note of project.notes) {
+          const pitch = noteMidi(note.pitch);
+          if (pitch === null) continue;
+          const start = Math.round(((note.measure - 1) * beatsInBar(project) + note.beat) * ppq);
+          const end = Math.max(start + 1, start + Math.round(note.duration * ppq));
+          const velocity = VELOCITIES[note.dynamic] || 80;
+          events.push({ tick: start, priority: 1, bytes: [0x90, pitch, velocity] });
+          events.push({ tick: end, priority: 0, bytes: [0x80, pitch, 0] });
+        }
+        events.sort((a, b) => a.tick - b.tick || a.priority - b.priority);
+        const track = [];
+        let previousTick = 0;
+        for (const event of events) {
+          track.push(...variableLength(event.tick - previousTick), ...event.bytes);
+          previousTick = event.tick;
+        }
+        track.push(0, 0xff, 0x2f, 0);
+        return new Uint8Array([0x4d,0x54,0x68,0x64,0,0,0,6,0,1,0,1,(ppq >> 8) & 255,ppq & 255,0x4d,0x54,0x72,0x6b,...uint32(track.length),...track]);
+      }
+      function exportMidi() {
+        const project = current();
+        if (!project) return;
+        try {
+          download(new Blob([midiFile(project)], { type: "audio/midi" }), projectFileName(project, "mid"));
+          closeDialogs();
+          showToast("MIDI file downloaded.");
+        } catch (error) {
+          $("#export-error").textContent = error.message;
+        }
+      }
+      function importMusicXml(text, fallbackTitle) {
+        const documentXml = new DOMParser().parseFromString(text, "application/xml");
+        if (documentXml.querySelector("parsererror") || documentXml.documentElement.localName !== "score-partwise") throw new Error("This does not appear to be a valid, uncompressed MusicXML score.");
+        const firstPart = documentXml.querySelector("part");
+        if (!firstPart) throw new Error("The MusicXML file contains no score part.");
+        const title = documentXml.querySelector("work-title, movement-title")?.textContent?.trim() || fallbackTitle || "Imported score";
+        const composer = documentXml.querySelector('creator[type="composer"]')?.textContent?.trim() || "";
+        const partId = firstPart.getAttribute("id");
+        const partName = Array.from(documentXml.querySelectorAll("score-part")).find(part => part.getAttribute("id") === partId)?.querySelector("part-name")?.textContent?.trim();
+        const instrument = ["Piano", "Guitar", "Violin", "Flute"].find(name => name.toLowerCase() === partName?.toLowerCase()) || "Other";
+        let divisions = 1;
+        let meter = "4/4";
+        let key = "C major";
+        let tempo = 96;
+        let dynamic = "mf";
+        const notes = [];
+        let measureNumber = 0;
+        for (const measure of Array.from(firstPart.children).filter(element => element.localName === "measure")) {
+          measureNumber++;
+          let cursor = 0;
+          const label = Number(measure.getAttribute("number"));
+          const actualMeasure = Number.isInteger(label) && label > 0 ? label : measureNumber;
+          for (const element of Array.from(measure.children)) {
+            if (element.localName === "attributes") {
+              const nextDivisions = Number(element.querySelector("divisions")?.textContent);
+              if (nextDivisions > 0) divisions = nextDivisions;
+              const fifths = Number(element.querySelector("key fifths")?.textContent || 0);
+              const mode = element.querySelector("key mode")?.textContent?.toLowerCase() === "minor" ? "minor" : "major";
+              const foundKey = Object.keys(KEY_FIFTHS).find(name => KEY_FIFTHS[name] === fifths && name.endsWith(mode));
+              if (foundKey) key = foundKey;
+              const beats = element.querySelector("time beats")?.textContent;
+              const beatType = element.querySelector("time beat-type")?.textContent;
+              if (beats && beatType) meter = `${beats}/${beatType}`;
+            } else if (element.localName === "direction") {
+              const perMinute = Number(element.querySelector("per-minute")?.textContent || element.querySelector("sound")?.getAttribute("tempo"));
+              if (perMinute >= 30 && perMinute <= 240) tempo = Math.round(perMinute);
+              const marking = element.querySelector("dynamics > *")?.localName;
+              if (DYNAMICS.includes(marking)) dynamic = marking;
+            } else if (element.localName === "sound") {
+              const foundTempo = Number(element.getAttribute("tempo"));
+              if (foundTempo >= 30 && foundTempo <= 240) tempo = Math.round(foundTempo);
+            } else if (element.localName === "backup" || element.localName === "forward") {
+              const amount = Number(element.querySelector("duration")?.textContent || 0) / divisions;
+              cursor += element.localName === "backup" ? -amount : amount;
+            } else if (element.localName === "note") {
+              const duration = Number(element.querySelector(":scope > duration")?.textContent || divisions) / divisions;
+              if (element.querySelector(":scope > rest")) {
+                if (!element.querySelector(":scope > chord")) cursor += duration;
+                continue;
+              }
+              const pitchNode = element.querySelector(":scope > pitch");
+              if (!pitchNode) continue;
+              const step = pitchNode.querySelector("step")?.textContent;
+              const alter = Number(pitchNode.querySelector("alter")?.textContent || 0);
+              const octave = pitchNode.querySelector("octave")?.textContent;
+              if (!/^[A-G]$/.test(step || "") || octave == null) continue;
+              const pitch = `${step}${alter === 1 ? "#" : alter === -1 ? "b" : ""}${octave}`;
+              const staff = element.querySelector(":scope > staff")?.textContent === "2" ? "L" : "R";
+              const fingering = element.querySelector("technical fingering")?.textContent?.trim() || "";
+              notes.push({ id: uid(), pitch, measure: actualMeasure, beat: Math.max(0, cursor), duration: Math.max(.0625, duration), hand: staff, finger: fingering, dynamic });
+              if (!element.querySelector(":scope > chord")) cursor += duration;
+            }
+          }
+        }
+        if (!notes.length) throw new Error("No pitched notes were found in this MusicXML file.");
+        return normalizeProject({ title, composer, tempo, meter, key, instrument, measureCount: measureNumber, notes });
+      }
+      function importFile(file) {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onerror = () => { $("#import-error").textContent = `Could not read the file: ${reader.error?.message || "unknown file error"}`; };
+        reader.onload = () => {
+          try {
+            const text = String(reader.result || "");
+            const extension = file.name.split(".").pop().toLowerCase();
+            let project;
+            if (extension === "json") {
+              const data = JSON.parse(text);
+              project = normalizeProject(data.score || data);
+              if (data.confidence) project.analysis = data.confidence;
+              if (data.source) project.source = data.source;
+            } else if (extension === "xml" || extension === "musicxml") {
+              project = importMusicXml(text, file.name.replace(/\.(musicxml|xml)$/i, ""));
+            } else {
+              throw new Error("Use an uncompressed MusicXML (.musicxml or .xml) file, or a Sonora JSON backup.");
+            }
+            if (state.projects.length >= 100) throw new Error("This browser library already has 100 scores. Delete one before importing another.");
+            state.projects.unshift(project);
+            state.currentId = project.id;
+            state.view = "studio";
+            state.undo = [];
+            state.redo = [];
+            persist();
+            closeDialogs();
+            render();
+            showToast(`${project.notes.length} notes imported from ${file.name}.`);
+          } catch (error) {
+            $("#import-error").textContent = error.message;
+          }
+        };
+        reader.readAsText(file);
+      }
+      function addSequence(text) {
+        const project = current();
+        if (!project) throw new Error("Create or open a score first.");
+        const tokens = text.trim().split(/[\s,;]+/).filter(Boolean);
+        if (!tokens.length) throw new Error("Enter at least one note, such as C4:1 D4:1.");
+        const parsed = tokens.map(token => {
+          const match = /^([A-Ga-g])([#b♭]?)(-?\d+)(?::([\d.]+))?$/.exec(token);
+          if (!match) throw new Error(`Could not read “${token}”. Use note names such as C4 or F#3:0.5.`);
+          const pitch = `${match[1].toUpperCase()}${match[2] === "♭" ? "b" : match[2]}${match[3]}`;
+          const duration = match[4] == null ? 1 : Number(match[4]);
+          if (noteMidi(pitch) === null || !Number.isFinite(duration) || duration <= 0 || duration > 16) throw new Error(`“${token}” has an invalid pitch or duration.`);
+          return { pitch, duration };
+        });
+        if (project.notes.length + parsed.length > 5000) throw new Error("A score can contain at most 5,000 notes.");
+        snapshot();
+        let measure = project.notes.reduce((max, note) => Math.max(max, note.measure), 1);
+        let beat = 0;
+        const bar = beatsInBar(project);
+        const last = sortedNotes(project).at(-1);
+        if (last) {
+          measure = last.measure;
+          beat = last.beat + last.duration;
+          while (beat >= bar) { beat -= bar; measure++; }
+        }
+        for (const item of parsed) {
+          while (beat >= bar) { beat -= bar; measure++; }
+          project.notes.push({ id: uid(), pitch: item.pitch, measure, beat, duration: item.duration, hand: "R", finger: "", dynamic: "mf" });
+          beat += item.duration;
+        }
+        project.measureCount = Math.max(project.measureCount, measure);
+        persist();
+        render();
+        showToast(`${parsed.length} note${parsed.length === 1 ? "" : "s"} added to the score.`);
+      }
+      function downloadAction(kind) {
+        if (kind === "export-midi") exportMidi();
+        else if (kind === "export-musicxml") exportMusicXml();
+        else if (kind === "export-json") exportJson();
+        else if (kind === "print") { closeDialogs(); window.print(); }
+      }
+      function keyOptions(selected) {
+        return Object.keys(KEY_FIFTHS).map(key => `<option value="${esc(key)}" ${key === selected ? "selected" : ""}>${esc(key)}</option>`).join("");
+      }
+      function durationOptions(selected) {
+        return DURATIONS.map(([value, label]) => `<option value="${value}" ${Math.abs(Number(selected) - Number(value)) < .001 ? "selected" : ""}>${label}</option>`).join("");
+      }
+      function noteY(pitch, hand) {
+        const match = /^([A-G])([#b]?)(-?\d+)$/.exec(pitch);
+        if (!match) return hand === "L" ? 128 : 70;
+        const letter = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 }[match[1]];
+        const diatonic = Number(match[3]) * 7 + letter;
+        const base = hand === "L" ? 2 * 7 + 4 : 4 * 7 + 2;
+        const lineBase = hand === "L" ? 130 : 75;
+        return lineBase - (diatonic - base) * 5.5;
+      }
+      function renderMeasure(project, measureNumber) {
+        const measureNotes = project.notes.filter(note => note.measure === measureNumber);
+        if (!measureNotes.length) return `<article class="measure"><div class="measure-top"><span>Measure ${measureNumber}</span><span>${project.meter}</span></div><div class="measure-empty">Empty measure</div></article>`;
+        const trebleLines = [0, 1, 2, 3, 4].map(step => `<line class="staff-line" x1="25" y1="${75 - step * 11}" x2="221" y2="${75 - step * 11}"/>`).join("");
+        const bassLines = [0, 1, 2, 3, 4].map(step => `<line class="staff-line" x1="25" y1="${130 - step * 11}" x2="221" y2="${130 - step * 11}"/>`).join("");
+        const notesSvg = measureNotes.map(note => {
+          const x = 33 + Math.min(beatsInBar(project), Math.max(0, note.beat)) / beatsInBar(project) * 176;
+          const y = Math.max(9, Math.min(151, noteY(note.pitch, note.hand)));
+          const staffBase = note.hand === "L" ? 130 : 75;
+          const lines = [];
+          for (let line = staffBase - 44; line >= 31 && note.hand !== "L"; line -= 11) lines.push(`<line class="staff-line" x1="25" y1="${line}" x2="221" y2="${line}"/>`);
+          for (let line = staffBase - 44; line >= 86 && note.hand === "L"; line -= 11) lines.push(`<line class="staff-line" x1="25" y1="${line}" x2="221" y2="${line}"/>`);
+          const ledger = y < (note.hand === "L" ? 86 : 31) || y > (note.hand === "L" ? 141 : 86) ? `<line class="staff-line" x1="${x - 7}" y1="${y}" x2="${x + 7}" y2="${y}"/>` : "";
+          const accidental = note.pitch.includes("#") ? "♯" : note.pitch.includes("b") ? "♭" : "";
+          const notehead = note.duration >= 2 ? "note-head hollow" : "note-head";
+          const stem = note.duration >= 4 ? "" : `<line class="note-stem" x1="${x + 3.7}" y1="${y}" x2="${x + 3.7}" y2="${y - 19}"/>`;
+          return `${ledger}<g class="score-note" data-note-id="${esc(note.id)}"><title>${esc(note.pitch)}, measure ${note.measure}, beat ${note.beat + 1}, ${note.duration} beats</title><ellipse class="${notehead}" cx="${x}" cy="${y}" rx="4.3" ry="3.1" transform="rotate(-20 ${x} ${y})"/>${stem}${accidental ? `<text class="note-accidental" x="${x - 12}" y="${y + 3}">${accidental}</text>` : ""}</g>`;
+        }).join("");
+        return `<article class="measure" data-measure="${measureNumber}"><div class="measure-top"><span>Measure ${measureNumber}</span><span>${project.meter}</span></div><svg viewBox="0 0 230 158" role="img" aria-label="Measure ${measureNumber}: ${measureNotes.map(note => note.pitch).join(", ")}"><text x="3" y="57" fill="#849087" font-size="29" font-family="Georgia,serif">𝄞</text><text x="3" y="114" fill="#849087" font-size="23" font-family="Georgia,serif">𝄢</text>${trebleLines}${bassLines}${notesSvg}<line class="bar-line" x1="224" y1="31" x2="224" y2="141"/></svg></article>`;
+      }
+      function analyses(project) {
+        const issues = [];
+        const bar = beatsInBar(project);
+        const range = RANGES[project.instrument] || RANGES.Other;
+        for (const note of project.notes) {
+          const midi = noteMidi(note.pitch);
+          if (note.beat + note.duration > bar + .001) issues.push({ kind: "error", text: `${note.pitch} in measure ${note.measure} extends past the ${project.meter} bar. Move it or shorten its duration.` });
+          if (midi != null && (midi < range[0] || midi > range[1])) issues.push({ kind: "warn", text: `${note.pitch} is outside the usual ${project.instrument.toLowerCase()} range.` });
+        }
+        const seen = new Set();
+        const uniqueIssues = issues.filter(issue => {
+          const key = `${issue.kind}:${issue.text}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        }).slice(0, 8);
+        return uniqueIssues;
+      }
+      function chordNames(project) {
+        const pitchNames = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
+        const qualities = [
+          ["major", [0, 4, 7]], ["minor", [0, 3, 7]], ["diminished", [0, 3, 6]], ["augmented", [0, 4, 8]]
+        ];
+        const result = [];
+        const maxMeasure = Math.max(1, project.measureCount, ...project.notes.map(note => note.measure));
+        for (let measure = 1; measure <= maxMeasure; measure++) {
+          const pitches = new Set(project.notes.filter(note => note.measure === measure).map(note => {
+            const midi = noteMidi(note.pitch);
+            return midi == null ? -1 : midi % 12;
+          }).filter(pitch => pitch >= 0));
+          let found = "";
+          for (let root = 0; root < 12 && !found; root++) {
+            for (const [quality, intervals] of qualities) {
+              if (intervals.every(interval => pitches.has((root + interval) % 12))) {
+                found = `${pitchNames[root]} ${quality}`;
+                break;
+              }
+            }
+          }
+          result.push({ measure, chord: found || (pitches.size ? `${pitches.size} pitch classes` : "—") });
+        }
+        return result;
+      }
+      function renderNotesTable(project) {
+        const notes = sortedNotes(project);
+        if (!notes.length) return `<div class="empty-notes">This score has no notes yet.<br>Use <b>Add note</b>, paste a sequence, or import MusicXML.</div>`;
+        const rows = notes.map((note, index) => `<tr data-note-row="${esc(note.id)}"><td><span class="row-number">${index + 1}</span></td><td><input aria-label="Pitch, note ${index + 1}" type="text" list="pitch-list" data-note-field="pitch" data-note-id="${esc(note.id)}" value="${esc(note.pitch)}"></td><td><input aria-label="Measure, note ${index + 1}" type="number" min="1" max="256" step="1" data-note-field="measure" data-note-id="${esc(note.id)}" value="${note.measure}"></td><td><input aria-label="Beat, note ${index + 1}" type="number" min="1" max="32" step="0.25" data-note-field="beat" data-note-id="${esc(note.id)}" value="${Number(note.beat) + 1}"></td><td><select aria-label="Duration, note ${index + 1}" data-note-field="duration" data-note-id="${esc(note.id)}">${durationOptions(note.duration)}</select></td><td><select aria-label="Hand, note ${index + 1}" data-note-field="hand" data-note-id="${esc(note.id)}"><option value="R" ${note.hand === "R" ? "selected" : ""}>RH</option><option value="L" ${note.hand === "L" ? "selected" : ""}>LH</option></select></td><td><input aria-label="Fingering, note ${index + 1}" title="Suggested fingering (1–5)" type="number" min="1" max="5" step="1" data-note-field="finger" data-note-id="${esc(note.id)}" value="${esc(note.finger)}" placeholder="–"></td><td><select aria-label="Dynamic, note ${index + 1}" data-note-field="dynamic" data-note-id="${esc(note.id)}">${DYNAMICS.map(dynamic => `<option value="${dynamic}" ${note.dynamic === dynamic ? "selected" : ""}>${dynamic}</option>`).join("")}</select></td><td><span class="row-number" title="${note.confidence == null ? "No model activation score" : "Uncalibrated model activation estimate"}">${note.confidence == null ? "—" : `${Math.round(note.confidence * 100)}%`}</span></td><td><button class="delete-row" type="button" data-action="delete-note" data-note-id="${esc(note.id)}" aria-label="Delete ${esc(note.pitch)}">×</button></td></tr>`).join("");
+        return `<datalist id="pitch-list">${NOTE_OPTIONS.map(pitch => `<option value="${pitch}">`).join("")}</datalist><div class="notes-scroll"><table class="notes-table"><thead><tr><th style="width:28px">#</th><th style="width:59px">Pitch</th><th style="width:48px">Bar</th><th style="width:47px">Beat</th><th style="width:72px">Length</th><th style="width:43px">Hand</th><th style="width:45px">Finger</th><th style="width:48px">Dyn.</th><th style="width:42px">AI</th><th style="width:32px"></th></tr></thead><tbody>${rows}</tbody></table></div>`;
+      }
+      function commonHead(title, description, actions = "") {
+        return `<div class="page-head"><div><div class="eyebrow">Sonora music workspace</div><h1>${title}</h1><p class="subtitle">${description}</p></div>${actions}</div>`;
+      }
+      function renderStudio(project) {
+        if (!project) return `${commonHead("Your score studio", "Create or import a score to begin.")}<button class="button primary" data-action="new-project">Create a score</button>`;
+        const maxMeasure = Math.max(project.measureCount, ...project.notes.map(note => note.measure), 1);
+        const issues = analyses(project);
+        const chords = chordNames(project);
+        const lastDate = project.updatedAt ? new Date(project.updatedAt).toLocaleDateString() : "This device";
+        const settingBar = `<section class="card toolbar-card" aria-label="Score settings"><div class="project-title-wrap"><label class="field-label" for="project-title">Score title</label><input id="project-title" class="title-input" type="text" maxlength="100" data-project-field="title" value="${esc(project.title)}"></div><div class="settings"><label class="setting wide"><span class="field-label">Composer</span><input type="text" maxlength="100" placeholder="Optional" data-project-field="composer" value="${esc(project.composer)}"></label><label class="setting wide"><span class="field-label">Instrument</span><select data-project-field="instrument">${["Piano", "Guitar", "Violin", "Flute", "Other"].map(instrument => `<option ${project.instrument === instrument ? "selected" : ""}>${instrument}</option>`).join("")}</select></label><label class="setting"><span class="field-label">Tempo · BPM</span><input type="number" min="30" max="240" data-project-field="tempo" value="${project.tempo}"></label><label class="setting"><span class="field-label">Time</span><select data-project-field="meter">${["2/4", "3/4", "4/4", "5/4", "6/8", "7/8", "9/8", "12/8"].map(meter => `<option ${project.meter === meter ? "selected" : ""}>${meter}</option>`).join("")}</select></label><label class="setting wide"><span class="field-label">Key</span><select data-project-field="key">${keyOptions(project.key)}</select></label></div></section>`;
+        const measures = Array.from({ length: Math.min(maxMeasure, 256) }, (_, index) => renderMeasure(project, index + 1)).join("");
+        const issueHtml = issues.length ? issues.map(issue => `<div class="notice-item ${issue.kind === "error" ? "error" : ""}"><span class="notice-mark">${issue.kind === "error" ? "!" : "•"}</span><span>${esc(issue.text)}</span></div>`).join("") : `<div class="notice-empty">No meter or instrument-range flags. This rule check is advisory, not a substitute for music-theory review.</div>`;
+        const chordHtml = chords.map(item => `<span class="chord-chip"><b>m.${item.measure}</b>&nbsp; ${esc(item.chord)}</span>`).join("");
+        const noteCount = project.notes.length;
+        const confidence = noteCount ? "Entered / imported · not AI-verified" : "Waiting for notes";
+        const confidenceScore = Number.isFinite(Number(project.analysis?.score)) ? `<span class="confidence-badge"><b>${(Number(project.analysis.score) * 100).toFixed(1)}%</b> model activation</span>` : `<span class="confidence-badge">No calibrated score provided</span>`;
+        const confidenceDescription = project.analysis?.description || "This score was entered or imported without an AI confidence estimate.";
+        return `${commonHead("Score studio", "Edit every note, check the notation, and hear it back.")}${settingBar}<div class="editor-grid">
+          <section class="card score-card" aria-label="Score notation">
+            <div class="card-head"><div><h2>Notation preview</h2><p>${esc(project.instrument)} · ${noteCount} note${noteCount === 1 ? "" : "s"} · ${maxMeasure} measure${maxMeasure === 1 ? "" : "s"}</p></div><div class="card-head-actions"><button class="button" type="button" data-action="undo" ${state.undo.length ? "" : "disabled"} aria-label="Undo">↶</button><button class="button" type="button" data-action="redo" ${state.redo.length ? "" : "disabled"} aria-label="Redo">↷</button><button class="button" type="button" data-action="transpose-down" aria-label="Transpose down">−½</button><button class="button" type="button" data-action="transpose-up" aria-label="Transpose up">+½</button></div></div>
+            <div class="score-scroll"><div class="measure-grid">${measures}</div></div>
+            <div class="score-meta"><span class="meta-chip">${esc(project.key)}</span><span class="meta-chip">${project.tempo} BPM</span><span class="meta-chip">${esc(project.meter)} time</span><span class="meta-chip">${esc(lastDate)}</span></div>
+          </section>
+          <div class="side-stack">
+            <section class="card notes-card" aria-label="Editable note list"><div class="card-head"><div><h2>Every note</h2><p>Edit pitch, timing, hand, fingering, and dynamics.</p></div><span class="note-count">${noteCount} total</span></div>${renderNotesTable(project)}<div class="notes-actions"><button class="button" type="button" data-action="add-note">＋ Add note</button><button class="button" type="button" data-action="add-chord">＋ Chord tone</button><button class="button" type="button" data-action="add-measure">＋ Measure</button></div></section>
+            <section class="card" aria-label="AI confidence estimate"><div class="card-head"><div><h2>Analysis confidence</h2><p>Uncertain notes are highlighted in the note list.</p></div></div><div class="harmony">${confidenceScore}</div><div class="confidence-note">${esc(confidenceDescription)}${project.analysis?.notesScored ? ` · ${project.analysis.notesScored} notes scored` : ""}</div></section>
+            <section class="card" aria-label="Music playback"><div class="card-head"><div><h2>Play &amp; practice</h2><p>Hear your score with a built-in tone generator.</p></div></div><div class="practice-bar"><button class="play-button" type="button" data-action="${state.playing ? "stop" : "play"}">${state.playing ? "■ Stop" : "▶ Play"}</button><select class="speed-select" aria-label="Playback speed" id="play-speed"><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option></select><span class="play-status" id="play-status">${state.playing ? "Playing score…" : `${project.tempo} BPM · synthesized locally`}</span></div></section>
+            <section class="card" aria-label="Score checks"><div class="card-head"><div><h2>Score checks</h2><p>Meter and instrument-range checks</p></div></div><div class="notice-list">${issueHtml}</div></section>
+            <section class="card" aria-label="Harmony estimate"><div class="card-head"><div><h2>Harmony overview</h2><p>Pitch-class summary by measure</p></div></div><div class="harmony">${chordHtml}</div><div class="confidence-note">Confidence: ${esc(confidence)}. Chord labels are rule-based estimates, not an AI transcription.</div></section>
+          </div>
+        </div>`;
+      }
+      function renderLibrary() {
+        const query = state.filter.trim().toLowerCase();
+        const projects = state.projects.filter(project => !query || `${project.title} ${project.instrument} ${project.composer}`.toLowerCase().includes(query));
+        const cards = projects.length ? projects.map(project => `<article class="card project-card"><div class="project-card-top"><h3><button class="project-card-open" type="button" data-open-project="${esc(project.id)}"> ${esc(project.title)}</button></h3><button class="delete-row" type="button" data-action="delete-project" data-project-id="${esc(project.id)}" aria-label="Delete ${esc(project.title)}">×</button></div><p>${esc(project.instrument)}${project.composer ? ` · ${esc(project.composer)}` : ""}</p><div class="project-card-meta"><span>${project.notes.length} notes</span><span>${Math.max(project.measureCount, ...project.notes.map(note => note.measure), 1)} measures</span><span>${project.tempo} BPM</span></div></article>`).join("") : `<div class="card library-empty">No scores match this search. Create a score or import MusicXML to get started.</div>`;
+        return `${commonHead("My scores", "Your saved work, right here on this device.", `<button class="button primary" type="button" data-action="new-project">＋ New score</button>`)}<div class="library-tools"><input class="search-input" type="search" id="library-search" placeholder="Search your scores…" value="${esc(state.filter)}" aria-label="Search your scores"><button class="button" type="button" data-action="import">Import score</button></div><div class="library-grid">${cards}</div>`;
+      }
+      function renderPractice(project) {
+        if (!project) return `${commonHead("Practice", "Create or import a score to begin practicing.")}`;
+        const notes = sortedNotes(project);
+        const rows = notes.map((note, index) => `<div class="practice-note" data-practice-note="${esc(note.id)}"><span>m. ${note.measure}</span><b>${esc(note.pitch)}</b><span>Beat ${note.beat + 1} · ${note.duration} beat${note.duration === 1 ? "" : "s"}</span><small>${note.dynamic || "mf"}${note.hand === "L" ? " · LH" : " · RH"}</small></div>`).join("");
+        return `${commonHead("Practice room", `${esc(project.title)} · ${esc(project.instrument)} · ${project.tempo} BPM`, `<button class="button primary" type="button" data-action="${state.playing ? "stop" : "play"}">${state.playing ? "■ Stop" : "▶ Play score"}</button>`)}<div class="practice-layout"><section class="card"><div class="card-head"><div><h2>Note sequence</h2><p>Playhead follows each written note.</p></div><span class="note-count">${notes.length} notes</span></div><div class="practice-notes">${rows || `<div class="empty-notes">Add notes in Studio to start practicing.</div>`}</div></section><aside class="card practice-tip"><h2>Practice tools</h2><p>Playback uses your score tempo. Adjust speed in Studio, edit note lengths, or transpose the full score by semitones. The browser’s built-in oscillator provides a simple reference tone; it is not a piano sample or performance rendering.</p><div style="height:12px"></div><button class="button" type="button" data-action="open-studio">Edit this score</button></aside></div>`;
+      }
+      function renderDiscover() {
+        return `${commonHead("Discover music", "Search public music catalogs and preview a YouTube link.", `<span class="ai-status ${state.apiHealth ? "ready" : "offline"}">${state.apiHealth ? "Connected to local server" : "Connect local server"}</span>`)}
+          <section class="card"><div class="card-head"><div><h2>Find scores and recordings</h2><p>Search catalog metadata from MusicBrainz and the Internet Archive.</p></div></div><form class="discovery-search" id="catalog-form" style="padding:12px"><input id="catalog-query" type="search" minlength="2" maxlength="120" placeholder="Try “Für Elise” or “Debussy Clair de Lune”" aria-label="Search music catalogs" required><button class="button primary" type="submit" data-action="search-catalog">Search catalogs</button></form><div class="search-results" id="catalog-results"><div class="result-empty">Search results link to the original source; this app does not download copyrighted scores.</div></div></section>
+          <div class="discover-grid"><section class="card"><div class="card-head"><div><h2>Preview a YouTube link</h2><p>Metadata and embedded playback are available; audio transcription needs an uploaded audio file.</p></div></div><form class="discovery-search" id="youtube-form" style="padding:12px"><input id="youtube-url" type="url" placeholder="https://www.youtube.com/watch?v=…" aria-label="YouTube video URL" required><button class="button" type="submit" data-action="youtube-lookup">Preview link</button></form><div class="youtube-preview" id="youtube-result"><div class="result-empty">Paste a video link to load its title, channel, and embedded player.</div></div></section><aside class="card practice-tip"><h2>Connect a model server</h2><p>Score images and audio recordings use local open-source models. Start the Docker backend, then use <b>Analyze</b> to connect this page to it. Your analysis files stay on that server; catalog search and YouTube metadata are online lookups.</p><div style="height:12px"></div><button class="button" type="button" data-action="open-analysis">Configure AI server</button></aside></div>`;
+      }
+      function render() {
+        $("#breadcrumb").textContent = state.view === "library" ? "My scores" : state.view === "practice" ? "Practice" : state.view === "discover" ? "Discover" : "Studio";
+        $$(".nav-item").forEach(button => {
+          const active = button.dataset.view === state.view;
+          button.classList.toggle("active", active);
+          if (active) button.setAttribute("aria-current", "page");
+          else button.removeAttribute("aria-current");
+        });
+        const project = current();
+        $("#view-root").innerHTML = state.view === "library" ? renderLibrary() : state.view === "practice" ? renderPractice(project) : state.view === "discover" ? renderDiscover() : renderStudio(project);
+        $("#recent-projects").innerHTML = state.projects.slice(0, 8).map(item => `<button class="project-shortcut ${item.id === state.currentId ? "current" : ""}" type="button" data-shortcut="${esc(item.id)}" title="${esc(item.title)}"><span class="project-dot"></span>${esc(item.title)}</button>`).join("") || `<span class="project-shortcut">No scores yet</span>`;
+        if (state.playing) highlightPlayback();
+      }
+      function setView(view) {
+        if (!["studio", "library", "practice", "discover"].includes(view)) return;
+        if (state.playing && view !== "practice" && view !== "studio") stopPlayback();
+        state.view = view;
+        render();
+      }
+      function addNote(chord = false) {
+        const project = current();
+        if (!project) { showToast("Create a score first."); return; }
+        if (project.notes.length >= 5000) { showToast("A score can contain at most 5,000 notes."); return; }
+        snapshot();
+        const notes = sortedNotes(project);
+        const last = notes.at(-1);
+        const bar = beatsInBar(project);
+        let measure = last ? last.measure : 1;
+        let beat = last ? last.beat + last.duration : 0;
+        if (chord && last) beat = last.beat;
+        while (beat >= bar) { beat -= bar; measure++; }
+        let pitch = "C4";
+        if (last) {
+          const midi = noteMidi(last.pitch);
+          pitch = midi == null ? "C4" : pitchFromMidi(Math.min(96, midi + (chord ? 4 : 2)));
+        }
+        project.notes.push({ id: uid(), pitch, measure, beat, duration: last?.duration || 1, hand: chord ? (last?.hand === "L" ? "R" : "L") : "R", finger: "", dynamic: last?.dynamic || "mf" });
+        project.measureCount = Math.max(project.measureCount, measure);
+        persist();
+        render();
+        const target = document.querySelector(`tr[data-note-row="${CSS.escape(project.notes.at(-1).id)}"] input`);
+        if (target) { target.focus(); target.select(); }
+      }
+      function addMeasure() {
+        const project = current();
+        if (!project) return;
+        if (project.measureCount >= 256) { showToast("Scores are limited to 256 measures in the notation view."); return; }
+        snapshot();
+        project.measureCount = Math.max(project.measureCount, ...project.notes.map(note => note.measure), 0) + 1;
+        persist();
+        render();
+      }
+      function mutateNote(id, field, rawValue) {
+        const project = current();
+        const note = project?.notes.find(item => item.id === id);
+        if (!note) return;
+        let value = rawValue;
+        if (field === "measure") {
+          value = Number(rawValue);
+          if (!Number.isInteger(value) || value < 1 || value > 999) throw new Error("Measure must be a whole number between 1 and 999.");
+        } else if (field === "beat") {
+          value = Number(rawValue) - 1;
+          if (!Number.isFinite(value) || value < 0 || value > 32) throw new Error("Beat must be between 1 and 33.");
+        } else if (field === "duration") {
+          value = Number(rawValue);
+          if (!DURATIONS.some(([duration]) => Number(duration) === value)) throw new Error("Choose a supported note duration.");
+        } else if (field === "pitch" && noteMidi(rawValue) === null) {
+          throw new Error("Enter a note such as C4, F#3, or Bb5.");
+        } else if (field === "finger" && rawValue !== "") {
+          value = Number(rawValue);
+          if (!Number.isInteger(value) || value < 1 || value > 5) throw new Error("Fingering must be 1 through 5, or left blank.");
+        } else if (field === "dynamic" && !DYNAMICS.includes(rawValue)) {
+          throw new Error("Choose a supported dynamic marking.");
+        }
+        snapshot();
+        note[field] = value;
+        project.measureCount = Math.max(project.measureCount, note.measure);
+        persist();
+        render();
+      }
+      function transpose(amount) {
+        const project = current();
+        if (!project || !project.notes.length) return;
+        snapshot();
+        project.notes = project.notes.map(note => {
+          const midi = noteMidi(note.pitch);
+          return { ...note, pitch: midi == null ? note.pitch : pitchFromMidi(Math.min(127, Math.max(0, midi + amount))) };
+        });
+        persist();
+        render();
+        showToast(`Score transposed ${amount > 0 ? "up" : "down"} ${Math.abs(amount)} semitone${Math.abs(amount) === 1 ? "" : "s"}.`);
+      }
+      function saveProjectField(input) {
+        const project = current();
+        if (!project) return;
+        const field = input.dataset.projectField;
+        let value = input.value;
+        if (field === "title") value = value.trim().slice(0, 100) || "Untitled score";
+        if (field === "composer") value = value.trim().slice(0, 100);
+        if (field === "tempo") {
+          value = Number(value);
+          if (!Number.isInteger(value) || value < 30 || value > 240) throw new Error("Tempo must be a whole number between 30 and 240 BPM.");
+        }
+        if (field === "instrument" && !RANGES[value]) throw new Error("Choose a supported instrument.");
+        if (field === "key" && KEY_FIFTHS[value] === undefined) throw new Error("Choose a supported key.");
+        if (field === "meter" && !/^\d{1,2}\/(1|2|4|8|16)$/.test(value)) throw new Error("Choose a supported time signature.");
+        snapshot();
+        project[field] = value;
+        if (field === "meter") project.measureCount = Math.max(project.measureCount, ...project.notes.map(note => note.measure), 1);
+        persist();
+        render();
+      }
+      function createProject(title, instrument) {
+        if (state.projects.length >= 100) throw new Error("This browser library is limited to 100 scores. Delete one before creating another.");
+        const project = normalizeProject({ title, instrument, tempo: 96, meter: "4/4", key: "C major", measureCount: 1, notes: [] });
+        state.projects.unshift(project);
+        state.currentId = project.id;
+        state.view = "studio";
+        state.undo = [];
+        state.redo = [];
+        persist();
+        render();
+        closeDialogs();
+        showToast("New score created. Add notes or import a MusicXML file.");
+      }
+      function deleteProject(id) {
+        const project = state.projects.find(item => item.id === id);
+        if (!project || !window.confirm(`Delete “${project.title}” from this browser? This cannot be undone.`)) return;
+        state.projects = state.projects.filter(item => item.id !== id);
+        if (state.currentId === id) state.currentId = state.projects[0]?.id || null;
+        if (!state.projects.length) state.projects = [defaultProject()], state.currentId = state.projects[0].id;
+        state.undo = [];
+        state.redo = [];
+        persist();
+        render();
+        showToast("Score deleted.");
+      }
+      function playPlayback() {
+        const project = current();
+        if (!project?.notes.length) { showToast("Add or import notes before playing."); return; }
+        try {
+          if (!state.audio) state.audio = new (window.AudioContext || window.webkitAudioContext)();
+          state.audio.resume();
+          stopPlayback(false);
+          const speed = Number($("#play-speed")?.value || 1);
+          const secondsPerBeat = 60 / project.tempo / (Number.isFinite(speed) && speed > 0 ? speed : 1);
+          const startAt = state.audio.currentTime + .08;
+          state.playStarted = startAt;
+          const maxBeat = Math.max(...project.notes.map(note => (note.measure - 1) * beatsInBar(project) + note.beat + note.duration));
+          state.playLength = maxBeat * secondsPerBeat;
+          const master = state.audio.createGain();
+          master.gain.value = Math.max(.02, Math.min(1, Number($("#play-volume")?.value || .45)));
+          master.connect(state.audio.destination);
+          state.sources = [];
+          for (const note of project.notes) {
+            const midi = noteMidi(note.pitch);
+            if (midi == null) continue;
+            const when = startAt + ((note.measure - 1) * beatsInBar(project) + note.beat) * secondsPerBeat;
+            const duration = Math.max(.045, note.duration * secondsPerBeat * .92);
+            const oscillator = state.audio.createOscillator();
+            const gain = state.audio.createGain();
+            oscillator.type = project.instrument === "Guitar" ? "triangle" : project.instrument === "Flute" ? "sine" : "triangle";
+            oscillator.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
+            gain.gain.setValueAtTime(0, when);
+            gain.gain.linearRampToValueAtTime((VELOCITIES[note.dynamic] || 80) / 127 * .12, when + .012);
+            gain.gain.setTargetAtTime(.0001, when + Math.max(.02, duration - .04), .025);
+            oscillator.connect(gain);
+            gain.connect(master);
+            oscillator.start(when);
+            oscillator.stop(when + duration + .12);
+            state.sources.push(oscillator);
+          }
+          state.playing = true;
+          render();
+          state.playTimer = setInterval(highlightPlayback, 80);
+          state.stopTimer = setTimeout(() => stopPlayback(), Math.ceil((state.playLength + .3) * 1000));
+        } catch (error) {
+          state.playing = false;
+          showToast(`Audio playback failed: ${error.message}`);
+          render();
+        }
+      }
+      function highlightPlayback() {
+        if (!state.playing || !state.audio) return;
+        const project = current();
+        if (!project) return;
+        const speed = Number($("#play-speed")?.value || 1);
+        const secondsPerBeat = 60 / project.tempo / (Number.isFinite(speed) && speed > 0 ? speed : 1);
+        const elapsed = Math.max(0, state.audio.currentTime - state.playStarted);
+        const beat = elapsed / secondsPerBeat;
+        const measure = Math.floor(beat / beatsInBar(project)) + 1;
+        const localBeat = beat % beatsInBar(project);
+        const sounding = project.notes.filter(note => note.measure === measure && localBeat >= note.beat && localBeat < note.beat + note.duration);
+        $$(".measure.playing").forEach(element => element.classList.remove("playing"));
+        $$(".practice-note.active").forEach(element => element.classList.remove("active"));
+        const measureElement = document.querySelector(`.measure[data-measure="${measure}"]`);
+        if (measureElement) measureElement.classList.add("playing");
+        for (const note of sounding) {
+          const row = document.querySelector(`[data-practice-note="${CSS.escape(note.id)}"]`);
+          if (row) row.classList.add("active");
+        }
+        const status = $("#play-status");
+        if (status) status.textContent = `Measure ${Math.min(measure, project.measureCount)} · beat ${Math.floor(localBeat) + 1}`;
+      }
+      function stopPlayback(renderAfter = true) {
+        if (state.playTimer) clearInterval(state.playTimer);
+        if (state.stopTimer) clearTimeout(state.stopTimer);
+        state.playTimer = null;
+        state.stopTimer = null;
+        for (const source of state.sources) {
+          try { source.stop(); } catch (_) { /* A scheduled oscillator may already have ended. */ }
+        }
+        state.sources = [];
+        state.playing = false;
+        $$(".measure.playing, .practice-note.active").forEach(element => element.classList.remove("playing", "active"));
+        if (renderAfter && $("#view-root")) render();
+      }
+
+      document.addEventListener("click", event => {
+        const nav = event.target.closest("[data-view]");
+        if (nav) { setView(nav.dataset.view); return; }
+        const shortcut = event.target.closest("[data-shortcut]");
+        if (shortcut) { state.currentId = shortcut.dataset.shortcut; state.view = "studio"; state.undo = []; state.redo = []; persist(); render(); return; }
+        const openCard = event.target.closest("[data-open-project]");
+        if (openCard) {
+          state.currentId = openCard.dataset.openProject; state.view = "studio"; state.undo = []; state.redo = []; persist(); render(); return;
+        }
+        const action = event.target.closest("[data-action]");
+        if (!action) return;
+        const name = action.dataset.action;
+        try {
+          if (name === "new-project") { $("#project-error").textContent = ""; openDialog("project-dialog"); $("#new-title").focus(); }
+          else if (name === "import") { $("#import-error").textContent = ""; openDialog("import-dialog"); }
+          else if (name === "open-analysis") { $("#analysis-error").textContent = ""; configureApiFields(); openDialog("analysis-dialog"); checkBackend(); }
+          else if (name === "run-analysis") runAnalysis();
+          else if (name === "save-api-config") saveApiConfig().catch(error => showToast(error.message));
+          else if (name === "close-dialog") closeDialogs();
+          else if (name === "export-menu") { $("#export-error").textContent = ""; openDialog("export-dialog"); }
+          else if (name === "export-midi" || name === "export-musicxml" || name === "export-json" || name === "print") downloadAction(name);
+          else if (name === "add-note") addNote(false);
+          else if (name === "add-chord") addNote(true);
+          else if (name === "add-measure") addMeasure();
+          else if (name === "delete-note") {
+            const project = current();
+            snapshot();
+            project.notes = project.notes.filter(note => note.id !== action.dataset.noteId);
+            persist(); render();
+          } else if (name === "delete-project") { event.stopPropagation(); deleteProject(action.dataset.projectId); }
+          else if (name === "undo") applyHistory(state.undo, state.redo);
+          else if (name === "redo") applyHistory(state.redo, state.undo);
+          else if (name === "transpose-up") transpose(1);
+          else if (name === "transpose-down") transpose(-1);
+          else if (name === "play") playPlayback();
+          else if (name === "stop") stopPlayback();
+          else if (name === "open-studio") setView("studio");
+          else if (name === "import-sequence") {
+            try {
+              addSequence($("#sequence-input").value);
+              $("#sequence-input").value = "";
+              $("#import-error").textContent = "";
+              closeDialogs();
+            } catch (error) { $("#import-error").textContent = error.message; }
+          }
+        } catch (error) {
+          showToast(error.message);
+        }
+      });
+      document.addEventListener("change", event => {
+        const input = event.target;
+        if (input.id === "import-file") { importFile(input.files?.[0]); input.value = ""; return; }
+        if (input.id === "analysis-kind") {
+          $("#analysis-file").value = "";
+          $("#analysis-file").accept = input.value === "score" ? "image/*,.pdf" : "audio/*,.wav,.mp3,.m4a,.flac,.ogg,.aiff,.aif";
+          document.querySelector('[data-action="run-analysis"]').textContent = input.value === "score" ? "Recognize score" : "Transcribe audio";
+          $("#analysis-error").textContent = "";
+          return;
+        }
+        if (input.matches("[data-note-field]")) {
+          try { mutateNote(input.dataset.noteId, input.dataset.noteField, input.value); }
+          catch (error) { showToast(error.message); render(); }
+          return;
+        }
+        if (input.matches("[data-project-field]")) {
+          try { saveProjectField(input); }
+          catch (error) { showToast(error.message); render(); }
+        }
+      });
+      document.addEventListener("input", event => {
+        const input = event.target;
+        if (input.id === "library-search") {
+          state.filter = input.value;
+          const selection = [input.selectionStart, input.selectionEnd];
+          render();
+          const replacement = $("#library-search");
+          replacement.focus();
+          replacement.setSelectionRange(selection[0], selection[1]);
+          return;
+        }
+        if (input.matches("[data-project-field='title']")) {
+          const project = current();
+          if (project) {
+            project.title = input.value.slice(0, 100) || "Untitled score";
+            persist();
+            $("#recent-projects").innerHTML = state.projects.slice(0, 8).map(item => `<button class="project-shortcut ${item.id === state.currentId ? "current" : ""}" type="button" data-shortcut="${esc(item.id)}" title="${esc(item.title)}"><span class="project-dot"></span>${esc(item.title)}</button>`).join("");
+          }
+        }
+      });
+      document.addEventListener("submit", event => {
+        const form = event.target;
+        if (form.id === "project-form") {
+          event.preventDefault();
+          try { createProject($("#new-title").value, $("#new-instrument").value); }
+          catch (error) { $("#project-error").textContent = error.message; }
+          return;
+        }
+        if (form.id === "catalog-form") {
+          event.preventDefault();
+          searchCatalog();
+          return;
+        }
+        if (form.id === "youtube-form") {
+          event.preventDefault();
+          lookupYouTube();
+        }
+      });
+      window.addEventListener("beforeunload", () => { if (state.playing) stopPlayback(false); });
+      loadState();
+      render();
+      checkBackend();
+    })();
+  </script>
+</body>
+</html>
