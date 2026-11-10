@@ -101,6 +101,7 @@
     .note-head.hollow { fill: #fff; }
     .note-stem { stroke: #34443a; stroke-width: 1.2; }
     .note-accidental { fill: #59665c; font: 11px Georgia, serif; }
+    .note-name-label { fill: #243d2c; font: 700 7px "DM Sans", sans-serif; text-anchor: middle; dominant-baseline: middle; }
     .measure-empty { display: grid; height: 157px; place-items: center; color: #a0a8a2; font: italic 12px var(--serif); }
     .score-meta { display: flex; flex-wrap: wrap; gap: 7px; padding: 10px 14px; border-top: 1px solid #edf0ec; }
     .meta-chip { padding: 5px 8px; border: 1px solid #e9ece6; border-radius: 5px; background: #fbfcfa; color: #768078; font-size: 9px; }
@@ -137,6 +138,7 @@
     .play-button svg { width: 13px; height: 13px; }
     .volume-range { width: 80px; accent-color: var(--green); }
     .speed-select { height: 30px; padding: 0 5px; border: 1px solid #e4e9e3; border-radius: 5px; background: #fff; color: #667168; font-size: 9px; }
+    .sound-select { min-width: 94px; height: 30px; padding: 0 6px; border: 1px solid #e4e9e3; border-radius: 5px; background: #fff; color: #667168; font-size: 9px; }
     .play-status { min-width: 0; flex: 1; overflow: hidden; color: #8a948c; font-size: 9px; text-align: right; text-overflow: ellipsis; white-space: nowrap; }
     .library-tools { display: flex; gap: 8px; margin-bottom: 14px; }
     .search-input { min-width: 0; height: 36px; flex: 1; padding: 0 11px; border: 1px solid #e1e7e0; border-radius: 7px; background: white; font-size: 11px; }
@@ -153,7 +155,8 @@
     .library-empty { grid-column: 1/-1; padding: 45px 20px; color: var(--muted); text-align: center; }
     .practice-layout { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, .65fr); gap: 14px; }
     .practice-notes { display: grid; gap: 6px; max-height: 530px; overflow: auto; padding: 11px; }
-    .practice-note { display: grid; grid-template-columns: 46px 1fr auto; align-items: center; gap: 10px; padding: 10px; border: 1px solid #edf0ec; border-radius: 6px; transition: background .15s, border-color .15s; }
+    .practice-note { display: grid; width: 100%; grid-template-columns: 46px minmax(40px, .7fr) minmax(90px, 1fr) auto; align-items: center; gap: 10px; padding: 10px; border: 1px solid #edf0ec; border-radius: 6px; background: #fff; cursor: pointer; text-align: left; transition: background .15s, border-color .15s; }
+    .practice-note:hover { border-color: #b6cbbb; }
     .practice-note.active { border-color: #82a98d; background: #eff7f0; }
     .practice-note b { font: 700 13px "Manrope", sans-serif; }
     .practice-note span { color: #7e8980; font-size: 10px; }
@@ -161,6 +164,15 @@
     .practice-tip { padding: 15px; }
     .practice-tip h2 { margin: 0 0 8px; font: 700 12px "Manrope", sans-serif; }
     .practice-tip p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.65; }
+    .practice-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 12px; }
+    .practice-controls label { display: grid; gap: 5px; color: #78817b; font-size: 9px; font-weight: 600; }
+    .practice-controls input, .practice-controls select { width: 100%; height: 32px; padding: 0 8px; border: 1px solid #e4e9e3; border-radius: 6px; background: #fff; color: #39453d; font-size: 11px; }
+    .practice-loop { display: flex !important; grid-column: 1 / -1; align-items: center; gap: 8px !important; }
+    .practice-loop input { width: 15px; height: 15px; margin: 0; }
+    .practice-progress { height: 4px; overflow: hidden; background: #eef2ed; }
+    .practice-progress > span { display: block; width: 0; height: 100%; background: var(--green); transition: width .1s linear; }
+    .practice-empty-actions { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
+    .delete-message { margin: 0; font-size: 12px; line-height: 1.6; }
     .toast { position: fixed; z-index: 10; right: 20px; bottom: 20px; max-width: min(420px, calc(100vw - 40px)); padding: 11px 14px; border: 1px solid #dfe8df; border-radius: 8px; background: white; box-shadow: 0 8px 26px rgba(24,36,28,.12); color: #405147; font-size: 11px; line-height: 1.5; }
     .toast[hidden] { display: none; }
     .ai-status { padding: 5px 8px; border: 1px solid #e6eae5; border-radius: 5px; background: #fff; color: #78817b; font-size: 9px; white-space: nowrap; }
@@ -253,8 +265,9 @@
       .api-settings { grid-template-columns: 1fr; }
       .analysis-settings { grid-template-columns: 1fr 1fr; }
       .measure svg { max-height: 170px; }
-      .practice-bar { gap: 6px; padding: 10px; }
-      .play-status { max-width: 82px; }
+      .practice-bar { flex-wrap: wrap; gap: 6px; padding: 10px; }
+      .sound-select { min-width: 80px; }
+      .play-status { max-width: none; flex-basis: 100%; }
     }
     @media print {
       body { background: white; }
@@ -315,15 +328,20 @@
       <div class="dialog-foot"><button class="button" type="button" data-action="close-dialog">Cancel</button><button class="button primary" type="submit">Create score</button></div>
     </form>
   </dialog>
+  <dialog id="delete-dialog">
+    <div class="dialog-head"><h2>Delete this score?</h2><button class="icon-button" type="button" data-action="cancel-delete" aria-label="Close">×</button></div>
+    <div class="dialog-body"><p class="delete-message" id="delete-message">This score will be removed from this browser.</p><p class="dialog-help">This cannot be undone. Export a Sonora backup first if you want to keep a copy.</p></div>
+    <div class="dialog-foot"><button class="button" type="button" data-action="cancel-delete">Keep score</button><button class="button danger" type="button" data-action="confirm-delete">Delete score</button></div>
+  </dialog>
   <dialog id="analysis-dialog">
     <div class="dialog-head"><h2>Analyze with local AI</h2><button class="icon-button" type="button" data-action="close-dialog" aria-label="Close">×</button></div>
     <div class="dialog-body">
       <p class="dialog-help">Your file is sent only to the Sonora server you configure. Sheet recognition uses Audiveris; audio transcription uses Spotify Basic Pitch. First model use may take a few minutes.</p>
       <section class="analysis-section">
         <h3>Choose input and settings</h3>
-        <label class="file-label">Choose score image, PDF, or audio<input id="analysis-file" type="file" accept="image/*,.pdf,audio/*,.wav,.mp3,.m4a,.flac,.ogg,.aiff"></label>
+        <label class="file-label"><span id="analysis-file-label">Choose score image or PDF</span><input id="analysis-file" type="file" accept="image/*,.pdf"></label>
         <div class="analysis-settings">
-          <label>Input type<select id="analysis-kind"><option value="score">Sheet image / PDF</option><option value="audio">Audio recording</option></select></label>
+          <label>Input type<select id="analysis-kind"><option value="score">Sheet image / PDF</option><option value="audio">Audio recording</option><option value="video">Video performance</option></select></label>
           <label>Tempo · BPM<input id="analysis-tempo" type="number" min="30" max="240" value="120"></label>
           <label>Time signature<select id="analysis-meter"><option>4/4</option><option>3/4</option><option>2/4</option><option>6/8</option><option>5/4</option><option>7/8</option></select></label>
           <label>Instrument<select id="analysis-instrument"><option>Piano</option><option>Guitar</option><option>Violin</option><option>Flute</option><option>Other</option></select></label>
@@ -385,7 +403,8 @@
       const VELOCITIES = { pp: 34, p: 48, mp: 64, mf: 80, f: 98, ff: 114 };
       const RANGES = { Piano: [21, 108], Guitar: [40, 88], Violin: [55, 103], Flute: [60, 96], Other: [0, 127] };
       const KEY_FIFTHS = { "C major": 0, "G major": 1, "D major": 2, "A major": 3, "E major": 4, "B major": 5, "F# major": 6, "C# major": 7, "F major": -1, "Bb major": -2, "Eb major": -3, "Ab major": -4, "Db major": -5, "Gb major": -6, "Cb major": -7, "A minor": 0, "E minor": 1, "B minor": 2, "F# minor": 3, "C# minor": 4, "G# minor": 5, "D# minor": 6, "A# minor": 7, "D minor": -1, "G minor": -2, "C minor": -3, "F minor": -4, "Bb minor": -5, "Eb minor": -6, "Ab minor": -7 };
-      const state = { projects: [], currentId: null, view: "studio", filter: "", undo: [], redo: [], audio: null, sources: [], playTimer: null, stopTimer: null, playing: false, playStarted: 0, playLength: 0, toastTimer: null, apiHealth: null };
+      const state = { projects: [], currentId: null, view: "studio", filter: "", undo: [], redo: [], audio: null, sources: [], playTimer: null, stopTimer: null, playing: false, playStarted: 0, playLength: 0, playbackStartBeat: 0, playbackEndBeat: 0, practiceStart: 1, practiceEnd: 0, practiceSpeed: 1, practiceHand: "both", practiceLoop: false, pendingDeleteId: null, noteNamesVisible: false, toastTimer: null, apiHealth: null };
+      const PLAYBACK_SOUNDS = ["Piano", "Guitar", "Violin", "Flute", "Synth"];
       const $ = selector => document.querySelector(selector);
       const $$ = selector => Array.from(document.querySelectorAll(selector));
       const uid = () => globalThis.crypto && typeof globalThis.crypto.randomUUID === "function" ? globalThis.crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
@@ -443,6 +462,7 @@
         return {
           id: uid(), title: String(value.title || "Imported score").slice(0, 100),
           instrument: ["Piano", "Guitar", "Violin", "Flute", "Other"].includes(value.instrument) ? value.instrument : "Piano",
+          playbackSound: PLAYBACK_SOUNDS.includes(value.playbackSound) ? value.playbackSound : (["Piano", "Guitar", "Violin", "Flute"].includes(value.instrument) ? value.instrument : "Piano"),
           composer: String(value.composer || "").slice(0, 100),
           tempo: Math.min(240, Math.max(30, Math.round(Number(value.tempo) || 96))),
           meter: /^\d{1,2}\/(1|2|4|8|16)$/.test(String(value.meter)) ? value.meter : "4/4",
@@ -457,7 +477,7 @@
         try {
           const project = current();
           if (project) project.updatedAt = new Date().toISOString();
-          localStorage.setItem(STORAGE_KEY, JSON.stringify({ projects: state.projects, currentId: state.currentId }));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ projects: state.projects, currentId: state.currentId, noteNamesVisible: state.noteNamesVisible }));
           $("#save-state").textContent = "Saved on this device";
         } catch (error) {
           $("#save-state").textContent = "Could not save";
@@ -465,6 +485,7 @@
         }
       }
       function loadState() {
+        let hasValidLibrary = false;
         try {
           const stored = localStorage.getItem(STORAGE_KEY);
           if (stored) {
@@ -472,12 +493,14 @@
             if (data && Array.isArray(data.projects)) {
               state.projects = data.projects.map(project => normalizeStoredProject(project));
               state.currentId = state.projects.some(project => project.id === data.currentId) ? data.currentId : (state.projects[0]?.id || null);
+              state.noteNamesVisible = data.noteNamesVisible === true;
+              hasValidLibrary = true;
             }
           }
         } catch (error) {
           showToast(`Saved scores could not be loaded: ${error.message}`);
         }
-        if (!state.projects.length) {
+        if (!hasValidLibrary) {
           const project = defaultProject();
           state.projects = [project];
           state.currentId = project.id;
@@ -556,23 +579,26 @@
         const errorNode = $("#analysis-error");
         const button = document.querySelector('[data-action="run-analysis"]');
         errorNode.textContent = "";
-        if (!file) { errorNode.textContent = "Choose a score image, PDF, or audio file first."; return; }
+        if (!file) { errorNode.textContent = kind === "score" ? "Choose a score image or PDF first." : kind === "video" ? "Choose a video file first." : "Choose an audio file first."; return; }
         if (file.size > 25 * 1024 * 1024) { errorNode.textContent = "Files are limited to 25 MB."; return; }
         const extension = file.name.split(".").pop().toLowerCase();
         const scoreExtensions = ["png", "jpg", "jpeg", "tif", "tiff", "bmp", "pdf"];
         const audioExtensions = ["wav", "mp3", "m4a", "flac", "ogg", "aiff", "aif"];
+        const videoExtensions = ["mp4", "mov", "m4v", "mkv", "webm", "avi"];
         if (kind === "score" && !scoreExtensions.includes(extension)) { errorNode.textContent = "For score recognition, choose an image or PDF file."; return; }
         if (kind === "audio" && !audioExtensions.includes(extension)) { errorNode.textContent = "For audio transcription, choose a WAV, MP3, M4A, FLAC, OGG, or AIFF file."; return; }
+        if (kind === "video" && !videoExtensions.includes(extension)) { errorNode.textContent = "For video transcription, choose an MP4, MOV, M4V, MKV, WebM, or AVI file."; return; }
         const form = new FormData();
         form.append("file", file);
         form.append("tempo", $("#analysis-tempo").value || "120");
         form.append("meter", $("#analysis-meter").value);
         form.append("instrument", $("#analysis-instrument").value);
-        if (kind === "audio") form.append("title", file.name.replace(/\.[^.]+$/, ""));
+        if (kind !== "score") form.append("title", file.name.replace(/\.[^.]+$/, ""));
         button.disabled = true;
-        button.textContent = kind === "score" ? "Recognizing notation…" : "Transcribing audio…";
+        button.textContent = kind === "score" ? "Recognizing notation…" : "Transcribing performance…";
         try {
-          const response = await apiRequest(kind === "score" ? "/api/analyze/score" : "/api/analyze/audio", { method: "POST", body: form });
+          const endpoint = kind === "score" ? "/api/analyze/score" : kind === "video" ? "/api/analyze/video" : "/api/analyze/audio";
+          const response = await apiRequest(endpoint, { method: "POST", body: form });
           const project = normalizeProject(response.score);
           project.analysis = response.confidence || null;
           project.source = response.source || { kind };
@@ -591,7 +617,7 @@
           errorNode.textContent = error.message;
         } finally {
           button.disabled = false;
-          button.textContent = "Recognize score";
+          button.textContent = $("#analysis-kind").value === "score" ? "Recognize score" : "Transcribe performance";
         }
       }
       async function searchCatalog() {
@@ -633,7 +659,7 @@
         resultNode.innerHTML = `<div class="result-empty">Looking up video details…</div>`;
         try {
           const response = await apiRequest(`/api/youtube?url=${encodeURIComponent(value)}`);
-          resultNode.innerHTML = `<iframe title="${esc(response.title)}" src="${esc(response.embedUrl)}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe><h3>${esc(response.title)}</h3><p>${esc(response.author || "")}</p><p>${esc(response.analysisNote)}</p><a href="${esc(response.url)}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a>`;
+          resultNode.innerHTML = `<iframe title="${esc(response.title)}" src="${esc(response.embedUrl)}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe><h3>${esc(response.title)}</h3><p>${esc(response.author || "")}</p><p>${esc(response.analysisNote)} If you have an authorized copy, upload its audio or video file to transcribe it.</p><div class="practice-empty-actions"><button class="button" type="button" data-action="open-audio-analysis">Upload audio/video to transcribe</button><a class="button" href="${esc(response.url)}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a></div>`;
         } catch (error) {
           resultNode.innerHTML = `<div class="notice-item error">${esc(error.message)}</div>`;
         } finally {
@@ -992,7 +1018,10 @@
           const accidental = note.pitch.includes("#") ? "♯" : note.pitch.includes("b") ? "♭" : "";
           const notehead = note.duration >= 2 ? "note-head hollow" : "note-head";
           const stem = note.duration >= 4 ? "" : `<line class="note-stem" x1="${x + 3.7}" y1="${y}" x2="${x + 3.7}" y2="${y - 19}"/>`;
-          return `${ledger}<g class="score-note" data-note-id="${esc(note.id)}"><title>${esc(note.pitch)}, measure ${note.measure}, beat ${note.beat + 1}, ${note.duration} beats</title><ellipse class="${notehead}" cx="${x}" cy="${y}" rx="4.3" ry="3.1" transform="rotate(-20 ${x} ${y})"/>${stem}${accidental ? `<text class="note-accidental" x="${x - 12}" y="${y + 3}">${accidental}</text>` : ""}</g>`;
+          const noteMark = state.noteNamesVisible
+            ? `<text class="note-name-label" x="${x}" y="${y}">${esc(note.pitch)}</text>`
+            : `<ellipse class="${notehead}" cx="${x}" cy="${y}" rx="4.3" ry="3.1" transform="rotate(-20 ${x} ${y})"/>${stem}${accidental ? `<text class="note-accidental" x="${x - 12}" y="${y + 3}">${accidental}</text>` : ""}`;
+          return `${ledger}<g class="score-note" data-note-id="${esc(note.id)}"><title>${esc(note.pitch)}, measure ${note.measure}, beat ${note.beat + 1}, ${note.duration} beats</title>${noteMark}</g>`;
         }).join("");
         return `<article class="measure" data-measure="${measureNumber}"><div class="measure-top"><span>Measure ${measureNumber}</span><span>${project.meter}</span></div><svg viewBox="0 0 230 158" role="img" aria-label="Measure ${measureNumber}: ${measureNotes.map(note => note.pitch).join(", ")}"><text x="3" y="57" fill="#849087" font-size="29" font-family="Georgia,serif">𝄞</text><text x="3" y="114" fill="#849087" font-size="23" font-family="Georgia,serif">𝄢</text>${trebleLines}${bassLines}${notesSvg}<line class="bar-line" x1="224" y1="31" x2="224" y2="141"/></svg></article>`;
       }
@@ -1064,14 +1093,14 @@
         const confidenceDescription = project.analysis?.description || "This score was entered or imported without an AI confidence estimate.";
         return `${commonHead("Score studio", "Edit every note, check the notation, and hear it back.")}${settingBar}<div class="editor-grid">
           <section class="card score-card" aria-label="Score notation">
-            <div class="card-head"><div><h2>Notation preview</h2><p>${esc(project.instrument)} · ${noteCount} note${noteCount === 1 ? "" : "s"} · ${maxMeasure} measure${maxMeasure === 1 ? "" : "s"}</p></div><div class="card-head-actions"><button class="button" type="button" data-action="undo" ${state.undo.length ? "" : "disabled"} aria-label="Undo">↶</button><button class="button" type="button" data-action="redo" ${state.redo.length ? "" : "disabled"} aria-label="Redo">↷</button><button class="button" type="button" data-action="transpose-down" aria-label="Transpose down">−½</button><button class="button" type="button" data-action="transpose-up" aria-label="Transpose up">+½</button></div></div>
+            <div class="card-head"><div><h2>Notation preview</h2><p>${esc(project.instrument)} · ${noteCount} note${noteCount === 1 ? "" : "s"} · ${maxMeasure} measure${maxMeasure === 1 ? "" : "s"}</p></div><div class="card-head-actions"><button class="button" type="button" data-action="toggle-note-names" aria-pressed="${state.noteNamesVisible}" title="Replace note symbols with their pitch names">${state.noteNamesVisible ? "Show symbols" : "Show note names"}</button><button class="button" type="button" data-action="undo" ${state.undo.length ? "" : "disabled"} aria-label="Undo">↶</button><button class="button" type="button" data-action="redo" ${state.redo.length ? "" : "disabled"} aria-label="Redo">↷</button><button class="button" type="button" data-action="transpose-down" aria-label="Transpose down">−½</button><button class="button" type="button" data-action="transpose-up" aria-label="Transpose up">+½</button></div></div>
             <div class="score-scroll"><div class="measure-grid">${measures}</div></div>
             <div class="score-meta"><span class="meta-chip">${esc(project.key)}</span><span class="meta-chip">${project.tempo} BPM</span><span class="meta-chip">${esc(project.meter)} time</span><span class="meta-chip">${esc(lastDate)}</span></div>
           </section>
           <div class="side-stack">
             <section class="card notes-card" aria-label="Editable note list"><div class="card-head"><div><h2>Every note</h2><p>Edit pitch, timing, hand, fingering, and dynamics.</p></div><span class="note-count">${noteCount} total</span></div>${renderNotesTable(project)}<div class="notes-actions"><button class="button" type="button" data-action="add-note">＋ Add note</button><button class="button" type="button" data-action="add-chord">＋ Chord tone</button><button class="button" type="button" data-action="add-measure">＋ Measure</button></div></section>
             <section class="card" aria-label="AI confidence estimate"><div class="card-head"><div><h2>Analysis confidence</h2><p>Uncertain notes are highlighted in the note list.</p></div></div><div class="harmony">${confidenceScore}</div><div class="confidence-note">${esc(confidenceDescription)}${project.analysis?.notesScored ? ` · ${project.analysis.notesScored} notes scored` : ""}</div></section>
-            <section class="card" aria-label="Music playback"><div class="card-head"><div><h2>Play &amp; practice</h2><p>Hear your score with a built-in tone generator.</p></div></div><div class="practice-bar"><button class="play-button" type="button" data-action="${state.playing ? "stop" : "play"}">${state.playing ? "■ Stop" : "▶ Play"}</button><select class="speed-select" aria-label="Playback speed" id="play-speed"><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option></select><span class="play-status" id="play-status">${state.playing ? "Playing score…" : `${project.tempo} BPM · synthesized locally`}</span></div></section>
+            <section class="card" aria-label="Music playback"><div class="card-head"><div><h2>Play &amp; practice</h2><p>Choose an instrument-style synthesized tone for playback.</p></div></div><div class="practice-bar"><button class="play-button" type="button" data-action="${state.playing ? "stop" : "play"}">${state.playing ? "■ Stop" : "▶ Play"}</button><select class="speed-select" aria-label="Playback speed" id="play-speed"><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option><option value="1.25">1.25×</option></select><select class="sound-select" aria-label="Playback sound" id="playback-sound">${PLAYBACK_SOUNDS.map(sound => `<option value="${sound}" ${project.playbackSound === sound ? "selected" : ""}>${sound}</option>`).join("")}</select><span class="play-status" id="play-status">${state.playing ? "Playing score…" : `${project.tempo} BPM · synthesized locally`}</span></div></section>
             <section class="card" aria-label="Score checks"><div class="card-head"><div><h2>Score checks</h2><p>Meter and instrument-range checks</p></div></div><div class="notice-list">${issueHtml}</div></section>
             <section class="card" aria-label="Harmony estimate"><div class="card-head"><div><h2>Harmony overview</h2><p>Pitch-class summary by measure</p></div></div><div class="harmony">${chordHtml}</div><div class="confidence-note">Confidence: ${esc(confidence)}. Chord labels are rule-based estimates, not an AI transcription.</div></section>
           </div>
@@ -1080,19 +1109,25 @@
       function renderLibrary() {
         const query = state.filter.trim().toLowerCase();
         const projects = state.projects.filter(project => !query || `${project.title} ${project.instrument} ${project.composer}`.toLowerCase().includes(query));
-        const cards = projects.length ? projects.map(project => `<article class="card project-card"><div class="project-card-top"><h3><button class="project-card-open" type="button" data-open-project="${esc(project.id)}"> ${esc(project.title)}</button></h3><button class="delete-row" type="button" data-action="delete-project" data-project-id="${esc(project.id)}" aria-label="Delete ${esc(project.title)}">×</button></div><p>${esc(project.instrument)}${project.composer ? ` · ${esc(project.composer)}` : ""}</p><div class="project-card-meta"><span>${project.notes.length} notes</span><span>${Math.max(project.measureCount, ...project.notes.map(note => note.measure), 1)} measures</span><span>${project.tempo} BPM</span></div></article>`).join("") : `<div class="card library-empty">No scores match this search. Create a score or import MusicXML to get started.</div>`;
+        const cards = projects.length ? projects.map(project => `<article class="card project-card"><div class="project-card-top"><h3><button class="project-card-open" type="button" data-open-project="${esc(project.id)}"> ${esc(project.title)}</button></h3><button class="delete-row" type="button" data-action="delete-project" data-project-id="${esc(project.id)}" aria-label="Delete ${esc(project.title)}">×</button></div><p>${esc(project.instrument)}${project.composer ? ` · ${esc(project.composer)}` : ""}</p><div class="project-card-meta"><span>${project.notes.length} notes</span><span>${Math.max(project.measureCount, ...project.notes.map(note => note.measure), 1)} measures</span><span>${project.tempo} BPM</span></div></article>`).join("") : state.projects.length ? `<div class="card library-empty">No scores match this search. Try another title or clear your search.</div>` : `<div class="card library-empty"><b>Your score library is empty.</b><p>Create a score or import one to get started. Your work will be saved in this browser.</p><div class="practice-empty-actions"><button class="button primary" type="button" data-action="new-project">＋ Create a score</button><button class="button" type="button" data-action="import">Import score</button></div></div>`;
         return `${commonHead("My scores", "Your saved work, right here on this device.", `<button class="button primary" type="button" data-action="new-project">＋ New score</button>`)}<div class="library-tools"><input class="search-input" type="search" id="library-search" placeholder="Search your scores…" value="${esc(state.filter)}" aria-label="Search your scores"><button class="button" type="button" data-action="import">Import score</button></div><div class="library-grid">${cards}</div>`;
       }
       function renderPractice(project) {
-        if (!project) return `${commonHead("Practice", "Create or import a score to begin practicing.")}`;
-        const notes = sortedNotes(project);
-        const rows = notes.map((note, index) => `<div class="practice-note" data-practice-note="${esc(note.id)}"><span>m. ${note.measure}</span><b>${esc(note.pitch)}</b><span>Beat ${note.beat + 1} · ${note.duration} beat${note.duration === 1 ? "" : "s"}</span><small>${note.dynamic || "mf"}${note.hand === "L" ? " · LH" : " · RH"}</small></div>`).join("");
-        return `${commonHead("Practice room", `${esc(project.title)} · ${esc(project.instrument)} · ${project.tempo} BPM`, `<button class="button primary" type="button" data-action="${state.playing ? "stop" : "play"}">${state.playing ? "■ Stop" : "▶ Play score"}</button>`)}<div class="practice-layout"><section class="card"><div class="card-head"><div><h2>Note sequence</h2><p>Playhead follows each written note.</p></div><span class="note-count">${notes.length} notes</span></div><div class="practice-notes">${rows || `<div class="empty-notes">Add notes in Studio to start practicing.</div>`}</div></section><aside class="card practice-tip"><h2>Practice tools</h2><p>Playback uses your score tempo. Adjust speed in Studio, edit note lengths, or transpose the full score by semitones. The browser’s built-in oscillator provides a simple reference tone; it is not a piano sample or performance rendering.</p><div style="height:12px"></div><button class="button" type="button" data-action="open-studio">Edit this score</button></aside></div>`;
+        if (!project) return `${commonHead("Practice", "Choose a score to begin practicing.")}<div class="card library-empty">There isn’t a score selected yet.<div class="practice-empty-actions"><button class="button primary" type="button" data-action="new-project">＋ Create a score</button><button class="button" type="button" data-view="library">Choose from My scores</button></div></div>`;
+        const maxMeasure = Math.max(project.measureCount, ...project.notes.map(note => note.measure), 1);
+        const startMeasure = Math.min(maxMeasure, Math.max(1, Number(state.practiceStart) || 1));
+        const endMeasure = Math.min(maxMeasure, Math.max(startMeasure, Number(state.practiceEnd) || maxMeasure));
+        const hand = ["both", "R", "L"].includes(state.practiceHand) ? state.practiceHand : "both";
+        const notes = sortedNotes(project).filter(note => note.measure >= startMeasure && note.measure <= endMeasure && (hand === "both" || note.hand === hand));
+        const rows = notes.map(note => `<button class="practice-note" type="button" data-action="preview-note" data-note-id="${esc(note.id)}" data-practice-note="${esc(note.id)}" aria-label="Hear ${esc(note.pitch)}, measure ${note.measure}, beat ${note.beat + 1}"><span>m. ${note.measure}</span><b>${esc(note.pitch)}</b><span>Beat ${note.beat + 1} · ${note.duration} beat${note.duration === 1 ? "" : "s"}</span><small>${note.dynamic || "mf"}${note.hand === "L" ? " · LH" : " · RH"}</small></button>`).join("");
+        const speed = [0.5, 0.75, 1].includes(Number(state.practiceSpeed)) ? Number(state.practiceSpeed) : 1;
+        return `${commonHead("Practice room", `${esc(project.title)} · ${esc(project.instrument)} · ${project.tempo} BPM`, `<button class="button primary" type="button" data-action="${state.playing ? "stop" : "play"}">${state.playing ? "■ Stop" : "▶ Play section"}</button>`)}<div class="practice-layout"><section class="card"><div class="card-head"><div><h2>Practice section</h2><p>Choose a passage and tap any note to hear it.</p></div><span class="note-count">${notes.length} note${notes.length === 1 ? "" : "s"}</span></div><div class="practice-progress" role="progressbar" aria-label="Practice playback progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="practice-progress"></span></div><div class="practice-controls"><label>From measure<input id="practice-start" type="number" min="1" max="${maxMeasure}" value="${startMeasure}"></label><label>To measure<input id="practice-end" type="number" min="1" max="${maxMeasure}" value="${endMeasure}"></label><label>Hands<select id="practice-hand"><option value="both" ${hand === "both" ? "selected" : ""}>Both hands</option><option value="R" ${hand === "R" ? "selected" : ""}>Right hand</option><option value="L" ${hand === "L" ? "selected" : ""}>Left hand</option></select></label><label>Practice speed<select id="practice-speed"><option value="0.5" ${speed === 0.5 ? "selected" : ""}>Slow · 0.5×</option><option value="0.75" ${speed === 0.75 ? "selected" : ""}>Steady · 0.75×</option><option value="1" ${speed === 1 ? "selected" : ""}>Score tempo · 1×</option></select></label><label class="practice-loop"><input id="practice-loop" type="checkbox" ${state.practiceLoop ? "checked" : ""}> Repeat this section</label></div><div class="practice-notes">${rows || `<div class="empty-notes">${project.notes.length ? "No notes in this section for the selected hand. Try Both hands or another measure range." : "Add notes in Studio to start practicing."}</div>`}</div></section><aside class="card practice-tip"><h2>Make it your practice</h2><p>Start slowly with one hand, then widen the measure range and try both hands. Turn on repeat to loop the selected passage. Tap a note in the list to hear that pitch on its own.</p><p style="margin-top:10px">Playback uses a synthesized ${esc(project.playbackSound)}-style tone, not a sampled instrument recording.</p><div class="practice-empty-actions"><button class="button" type="button" data-action="open-studio">Edit this score</button></div></aside></div>`;
       }
       function renderDiscover() {
-        return `${commonHead("Discover music", "Search public music catalogs and preview a YouTube link.", `<span class="ai-status ${state.apiHealth ? "ready" : "offline"}">${state.apiHealth ? "Connected to local server" : "Connect local server"}</span>`)}
+        return `${commonHead("Discover music", "Find music, preview performances, or create a score from an audio recording.", `<span class="ai-status ${state.apiHealth ? "ready" : "offline"}">${state.apiHealth ? "Connected to local server" : "Connect local server"}</span>`)}
           <section class="card"><div class="card-head"><div><h2>Find scores and recordings</h2><p>Search catalog metadata from MusicBrainz and the Internet Archive.</p></div></div><form class="discovery-search" id="catalog-form" style="padding:12px"><input id="catalog-query" type="search" minlength="2" maxlength="120" placeholder="Try “Für Elise” or “Debussy Clair de Lune”" aria-label="Search music catalogs" required><button class="button primary" type="submit" data-action="search-catalog">Search catalogs</button></form><div class="search-results" id="catalog-results"><div class="result-empty">Search results link to the original source; this app does not download copyrighted scores.</div></div></section>
-          <div class="discover-grid"><section class="card"><div class="card-head"><div><h2>Preview a YouTube link</h2><p>Metadata and embedded playback are available; audio transcription needs an uploaded audio file.</p></div></div><form class="discovery-search" id="youtube-form" style="padding:12px"><input id="youtube-url" type="url" placeholder="https://www.youtube.com/watch?v=…" aria-label="YouTube video URL" required><button class="button" type="submit" data-action="youtube-lookup">Preview link</button></form><div class="youtube-preview" id="youtube-result"><div class="result-empty">Paste a video link to load its title, channel, and embedded player.</div></div></section><aside class="card practice-tip"><h2>Connect a model server</h2><p>Score images and audio recordings use local open-source models. Start the Docker backend, then use <b>Analyze</b> to connect this page to it. Your analysis files stay on that server; catalog search and YouTube metadata are online lookups.</p><div style="height:12px"></div><button class="button" type="button" data-action="open-analysis">Configure AI server</button></aside></div>`;
+          <div class="discover-grid"><section class="card"><div class="card-head"><div><h2>Create a score from audio or video</h2><p>Upload a recording or video performance to detect notes and make an editable score.</p></div></div><div class="practice-tip"><p>For the clearest results, use a short recording with one prominent instrument. Videos must include an audio track and be under 10 minutes.</p><p style="margin-top:8px">Unsupported, unreadable, or non-musical inputs are rejected when no score or notes can be recognized. This is not a classifier of prank intent.</p><div class="practice-empty-actions"><button class="button primary" type="button" data-action="open-audio-analysis">Choose audio/video file</button></div></div></section><section class="card"><div class="card-head"><div><h2>Preview a YouTube link</h2><p>Preview performances here; direct YouTube audio extraction is not available.</p></div></div><form class="discovery-search" id="youtube-form" style="padding:12px"><input id="youtube-url" type="url" placeholder="https://www.youtube.com/watch?v=…" aria-label="YouTube video URL" required><button class="button" type="submit" data-action="youtube-lookup">Preview link</button></form><div class="youtube-preview" id="youtube-result"><div class="result-empty">Paste a video link to load its title, channel, and embedded player. YouTube’s official embed provides playback and metadata, not an audio file for transcription. If you have an authorized copy, upload the audio or video file.</div></div></section></div>
+          <aside class="card practice-tip" style="margin-top:13px"><h2>Connect a model server</h2><p>Score images and audio recordings use local open-source models. Start the Docker backend, then use <b>Analyze</b> to connect this page to it. Your analysis files stay on that server; catalog search and YouTube metadata are online lookups.</p><div class="practice-empty-actions"><button class="button" type="button" data-action="open-analysis">Configure AI server</button></div></aside>`;
       }
       function render() {
         $("#breadcrumb").textContent = state.view === "library" ? "My scores" : state.view === "practice" ? "Practice" : state.view === "discover" ? "Discover" : "Studio";
@@ -1109,7 +1144,7 @@
       }
       function setView(view) {
         if (!["studio", "library", "practice", "discover"].includes(view)) return;
-        if (state.playing && view !== "practice" && view !== "studio") stopPlayback();
+        if (state.playing && view !== state.view) stopPlayback(false);
         state.view = view;
         render();
       }
@@ -1221,55 +1256,128 @@
       }
       function deleteProject(id) {
         const project = state.projects.find(item => item.id === id);
-        if (!project || !window.confirm(`Delete “${project.title}” from this browser? This cannot be undone.`)) return;
+        if (!project) return;
+        state.pendingDeleteId = id;
+        $("#delete-message").textContent = `Delete “${project.title}” from this browser?`;
+        openDialog("delete-dialog");
+      }
+      function confirmDeleteProject() {
+        const id = state.pendingDeleteId;
+        const project = state.projects.find(item => item.id === id);
+        if (!project) { closeDialogs(); state.pendingDeleteId = null; return; }
+        const title = project.title;
+        if (state.playing && state.currentId === id) stopPlayback(false);
         state.projects = state.projects.filter(item => item.id !== id);
         if (state.currentId === id) state.currentId = state.projects[0]?.id || null;
-        if (!state.projects.length) state.projects = [defaultProject()], state.currentId = state.projects[0].id;
         state.undo = [];
         state.redo = [];
+        state.pendingDeleteId = null;
         persist();
+        closeDialogs();
         render();
-        showToast("Score deleted.");
+        showToast(`“${title}” deleted.`);
       }
-      function playPlayback() {
+      function scheduleInstrumentNote(midi, when, duration, velocity, master, sound) {
+        const profiles = {
+          Piano: { attack: .008, sustain: .2, decay: .45, partials: [[1, .72, "sine"], [2, .22, "sine"], [3, .08, "sine"]] },
+          Guitar: { attack: .004, sustain: .12, decay: .32, partials: [[1, .72, "triangle"], [2, .2, "sine"], [3, .07, "sine"]] },
+          Violin: { attack: .09, sustain: .82, partials: [[1, .62, "sawtooth"], [2, .16, "sawtooth"]] },
+          Flute: { attack: .035, sustain: .72, partials: [[1, .82, "sine"], [2, .12, "sine"]] },
+          Synth: { attack: .012, sustain: .65, partials: [[1, .64, "square"], [2, .12, "sine"]] }
+        };
+        const profile = profiles[sound] || profiles.Piano;
+        const noteGain = state.audio.createGain();
+        const peak = Math.max(.001, Math.min(1, velocity / 127)) * .12;
+        const attack = Math.min(profile.attack, duration * .3);
+        const decayAt = when + Math.max(attack + .001, duration * .5);
+        const releaseAt = when + Math.max(attack + .002, duration * .88);
+        noteGain.gain.setValueAtTime(.0001, when);
+        noteGain.gain.linearRampToValueAtTime(peak, when + attack);
+        if (profile.decay) {
+          noteGain.gain.exponentialRampToValueAtTime(Math.max(.0001, peak * profile.sustain), decayAt);
+        }
+        noteGain.gain.setTargetAtTime(.0001, releaseAt, sound === "Violin" ? .08 : .035);
+        noteGain.connect(master);
+        const sources = [];
+        for (const [ratio, level, type] of profile.partials) {
+          const oscillator = state.audio.createOscillator();
+          const partialGain = state.audio.createGain();
+          oscillator.type = type;
+          oscillator.frequency.value = 440 * Math.pow(2, (midi - 69) / 12) * ratio;
+          partialGain.gain.value = level;
+          oscillator.connect(partialGain);
+          partialGain.connect(noteGain);
+          oscillator.start(when);
+          oscillator.stop(when + duration + .12);
+          sources.push(oscillator);
+        }
+        return sources;
+      }
+      async function previewPracticeNote(id) {
+        const project = current();
+        const note = project?.notes.find(item => item.id === id);
+        const midi = note ? noteMidi(note.pitch) : null;
+        if (!project || midi === null) return;
+        try {
+          if (!state.audio) state.audio = new (window.AudioContext || window.webkitAudioContext)();
+          await state.audio.resume();
+          if (state.playing) stopPlayback();
+          const master = state.audio.createGain();
+          master.gain.value = Math.max(.02, Math.min(1, Number($("#play-volume")?.value || .45)));
+          master.connect(state.audio.destination);
+          const sound = PLAYBACK_SOUNDS.includes(project.playbackSound) ? project.playbackSound : "Piano";
+          state.sources.push(...scheduleInstrumentNote(midi, state.audio.currentTime + .02, .45, VELOCITIES[note.dynamic] || 80, master, sound));
+        } catch (error) {
+          showToast(`Could not preview note: ${error.message}`);
+        }
+      }
+      async function playPlayback(loopRestart = false) {
         const project = current();
         if (!project?.notes.length) { showToast("Add or import notes before playing."); return; }
         try {
           if (!state.audio) state.audio = new (window.AudioContext || window.webkitAudioContext)();
-          state.audio.resume();
+          await state.audio.resume();
           stopPlayback(false);
-          const speed = Number($("#play-speed")?.value || 1);
+          const isPractice = state.view === "practice";
+          const maxMeasure = Math.max(project.measureCount, ...project.notes.map(note => note.measure), 1);
+          const startMeasure = isPractice ? Math.min(maxMeasure, Math.max(1, Number(state.practiceStart) || 1)) : 1;
+          const endMeasure = isPractice ? Math.min(maxMeasure, Math.max(startMeasure, Number(state.practiceEnd) || maxMeasure)) : maxMeasure;
+          const hand = isPractice && ["R", "L"].includes(state.practiceHand) ? state.practiceHand : "both";
+          const selectedNotes = project.notes.filter(note => note.measure >= startMeasure && note.measure <= endMeasure && (hand === "both" || note.hand === hand));
+          if (!selectedNotes.length) {
+            if (loopRestart) stopPlayback();
+            showToast("There are no notes in this section for the selected hand.");
+            return;
+          }
+          const speed = isPractice ? Number(state.practiceSpeed) : Number($("#play-speed")?.value || 1);
           const secondsPerBeat = 60 / project.tempo / (Number.isFinite(speed) && speed > 0 ? speed : 1);
           const startAt = state.audio.currentTime + .08;
           state.playStarted = startAt;
-          const maxBeat = Math.max(...project.notes.map(note => (note.measure - 1) * beatsInBar(project) + note.beat + note.duration));
-          state.playLength = maxBeat * secondsPerBeat;
+          const barBeats = beatsInBar(project);
+          state.playbackStartBeat = (startMeasure - 1) * barBeats;
+          const maxNoteBeat = Math.max(...selectedNotes.map(note => (note.measure - 1) * barBeats + note.beat + note.duration));
+          state.playbackEndBeat = isPractice ? endMeasure * barBeats : Math.max(maxMeasure * barBeats, maxNoteBeat);
+          state.playLength = (state.playbackEndBeat - state.playbackStartBeat) * secondsPerBeat;
           const master = state.audio.createGain();
           master.gain.value = Math.max(.02, Math.min(1, Number($("#play-volume")?.value || .45)));
           master.connect(state.audio.destination);
           state.sources = [];
-          for (const note of project.notes) {
+          const sound = PLAYBACK_SOUNDS.includes(project.playbackSound) ? project.playbackSound : "Piano";
+          for (const note of selectedNotes) {
             const midi = noteMidi(note.pitch);
             if (midi == null) continue;
-            const when = startAt + ((note.measure - 1) * beatsInBar(project) + note.beat) * secondsPerBeat;
+            const absoluteBeat = (note.measure - 1) * barBeats + note.beat;
+            const when = startAt + (absoluteBeat - state.playbackStartBeat) * secondsPerBeat;
             const duration = Math.max(.045, note.duration * secondsPerBeat * .92);
-            const oscillator = state.audio.createOscillator();
-            const gain = state.audio.createGain();
-            oscillator.type = project.instrument === "Guitar" ? "triangle" : project.instrument === "Flute" ? "sine" : "triangle";
-            oscillator.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
-            gain.gain.setValueAtTime(0, when);
-            gain.gain.linearRampToValueAtTime((VELOCITIES[note.dynamic] || 80) / 127 * .12, when + .012);
-            gain.gain.setTargetAtTime(.0001, when + Math.max(.02, duration - .04), .025);
-            oscillator.connect(gain);
-            gain.connect(master);
-            oscillator.start(when);
-            oscillator.stop(when + duration + .12);
-            state.sources.push(oscillator);
+            state.sources.push(...scheduleInstrumentNote(midi, when, duration, VELOCITIES[note.dynamic] || 80, master, sound));
           }
           state.playing = true;
           render();
           state.playTimer = setInterval(highlightPlayback, 80);
-          state.stopTimer = setTimeout(() => stopPlayback(), Math.ceil((state.playLength + .3) * 1000));
+          state.stopTimer = setTimeout(() => {
+            if (state.view === "practice" && state.practiceLoop) playPlayback(true);
+            else stopPlayback();
+          }, Math.ceil((state.playLength + .3) * 1000));
         } catch (error) {
           state.playing = false;
           showToast(`Audio playback failed: ${error.message}`);
@@ -1280,13 +1388,14 @@
         if (!state.playing || !state.audio) return;
         const project = current();
         if (!project) return;
-        const speed = Number($("#play-speed")?.value || 1);
+        const speed = state.view === "practice" ? Number(state.practiceSpeed) : Number($("#play-speed")?.value || 1);
         const secondsPerBeat = 60 / project.tempo / (Number.isFinite(speed) && speed > 0 ? speed : 1);
         const elapsed = Math.max(0, state.audio.currentTime - state.playStarted);
-        const beat = elapsed / secondsPerBeat;
+        const beat = state.playbackStartBeat + elapsed / secondsPerBeat;
         const measure = Math.floor(beat / beatsInBar(project)) + 1;
         const localBeat = beat % beatsInBar(project);
-        const sounding = project.notes.filter(note => note.measure === measure && localBeat >= note.beat && localBeat < note.beat + note.duration);
+        const hand = state.view === "practice" && ["R", "L"].includes(state.practiceHand) ? state.practiceHand : "both";
+        const sounding = project.notes.filter(note => note.measure === measure && (hand === "both" || note.hand === hand) && localBeat >= note.beat && localBeat < note.beat + note.duration);
         $$(".measure.playing").forEach(element => element.classList.remove("playing"));
         $$(".practice-note.active").forEach(element => element.classList.remove("active"));
         const measureElement = document.querySelector(`.measure[data-measure="${measure}"]`);
@@ -1296,7 +1405,13 @@
           if (row) row.classList.add("active");
         }
         const status = $("#play-status");
-        if (status) status.textContent = `Measure ${Math.min(measure, project.measureCount)} · beat ${Math.floor(localBeat) + 1}`;
+        if (status) status.textContent = `Measure ${Math.min(measure, Math.ceil(state.playbackEndBeat / beatsInBar(project)))} · beat ${Math.floor(localBeat) + 1}`;
+        const progress = $("#practice-progress");
+        if (progress) {
+          const percent = state.playLength ? Math.min(100, Math.max(0, ((state.audio.currentTime - state.playStarted) / state.playLength) * 100)) : 0;
+          progress.style.width = `${percent}%`;
+          progress.parentElement.setAttribute("aria-valuenow", String(Math.round(percent)));
+        }
       }
       function stopPlayback(renderAfter = true) {
         if (state.playTimer) clearInterval(state.playTimer);
@@ -1327,10 +1442,22 @@
         try {
           if (name === "new-project") { $("#project-error").textContent = ""; openDialog("project-dialog"); $("#new-title").focus(); }
           else if (name === "import") { $("#import-error").textContent = ""; openDialog("import-dialog"); }
-          else if (name === "open-analysis") { $("#analysis-error").textContent = ""; configureApiFields(); openDialog("analysis-dialog"); checkBackend(); }
+          else if (name === "open-analysis" || name === "open-audio-analysis") {
+            $("#analysis-error").textContent = "";
+            configureApiFields();
+            if (name === "open-audio-analysis") {
+              $("#analysis-kind").value = "audio";
+              $("#analysis-kind").dispatchEvent(new Event("change", { bubbles: true }));
+            }
+            openDialog("analysis-dialog");
+            checkBackend();
+          }
+          else if (name === "toggle-note-names") { state.noteNamesVisible = !state.noteNamesVisible; persist(); render(); }
           else if (name === "run-analysis") runAnalysis();
           else if (name === "save-api-config") saveApiConfig().catch(error => showToast(error.message));
           else if (name === "close-dialog") closeDialogs();
+          else if (name === "cancel-delete") { state.pendingDeleteId = null; closeDialogs(); }
+          else if (name === "confirm-delete") confirmDeleteProject();
           else if (name === "export-menu") { $("#export-error").textContent = ""; openDialog("export-dialog"); }
           else if (name === "export-midi" || name === "export-musicxml" || name === "export-json" || name === "print") downloadAction(name);
           else if (name === "add-note") addNote(false);
@@ -1348,6 +1475,7 @@
           else if (name === "transpose-down") transpose(-1);
           else if (name === "play") playPlayback();
           else if (name === "stop") stopPlayback();
+          else if (name === "preview-note") previewPracticeNote(action.dataset.noteId);
           else if (name === "open-studio") setView("studio");
           else if (name === "import-sequence") {
             try {
@@ -1363,11 +1491,45 @@
       });
       document.addEventListener("change", event => {
         const input = event.target;
+        if (input.id === "practice-start" || input.id === "practice-end" || input.id === "practice-hand" || input.id === "practice-speed" || input.id === "practice-loop") {
+          if (input.id === "practice-start" || input.id === "practice-end") {
+            const project = current();
+            const maxMeasure = project ? Math.max(project.measureCount, ...project.notes.map(note => note.measure), 1) : 1;
+            const rawValue = Number(input.value);
+            if (!Number.isInteger(rawValue) || rawValue < 1 || rawValue > maxMeasure) {
+              showToast(`Choose a measure between 1 and ${maxMeasure}.`);
+              render();
+              return;
+            }
+            if (input.id === "practice-start") {
+              state.practiceStart = rawValue;
+              if (state.practiceEnd && state.practiceEnd < rawValue) state.practiceEnd = rawValue;
+            } else {
+              state.practiceEnd = Math.max(state.practiceStart, rawValue);
+            }
+          } else if (input.id === "practice-hand") state.practiceHand = input.value;
+          else if (input.id === "practice-speed") state.practiceSpeed = Number(input.value);
+          else state.practiceLoop = input.checked;
+          if (state.playing && input.id !== "practice-loop") stopPlayback(false);
+          render();
+          return;
+        }
+        if (input.id === "playback-sound") {
+          const project = current();
+          if (project && PLAYBACK_SOUNDS.includes(input.value)) {
+            project.playbackSound = input.value;
+            persist();
+            if (state.playing) stopPlayback();
+            else render();
+          }
+          return;
+        }
         if (input.id === "import-file") { importFile(input.files?.[0]); input.value = ""; return; }
         if (input.id === "analysis-kind") {
           $("#analysis-file").value = "";
-          $("#analysis-file").accept = input.value === "score" ? "image/*,.pdf" : "audio/*,.wav,.mp3,.m4a,.flac,.ogg,.aiff,.aif";
-          document.querySelector('[data-action="run-analysis"]').textContent = input.value === "score" ? "Recognize score" : "Transcribe audio";
+          $("#analysis-file").accept = input.value === "score" ? "image/*,.pdf" : input.value === "video" ? "video/*,.mp4,.mov,.m4v,.mkv,.webm,.avi" : "audio/*,.wav,.mp3,.m4a,.flac,.ogg,.aiff,.aif";
+          $("#analysis-file-label").textContent = input.value === "score" ? "Choose score image or PDF" : input.value === "video" ? "Choose video file" : "Choose audio file";
+          document.querySelector('[data-action="run-analysis"]').textContent = input.value === "score" ? "Recognize score" : "Transcribe performance";
           $("#analysis-error").textContent = "";
           return;
         }

@@ -1,4 +1,5 @@
 import io
+import json
 import tempfile
 import zipfile
 import unittest
@@ -8,7 +9,15 @@ from unittest.mock import patch
 
 import numpy as np
 
-from server.main import _activation_for_note, _extract_musicxml, _midi_pitch, parse_musicxml, recognize_score
+from server.main import (
+    _activation_for_note,
+    _extract_musicxml,
+    _midi_pitch,
+    _validate_score_signature,
+    extract_video_audio,
+    parse_musicxml,
+    recognize_score,
+)
 
 
 MUSICXML = b"""<?xml version="1.0" encoding="UTF-8"?>
@@ -110,10 +119,58 @@ class AudiverisTests(unittest.TestCase):
             with patch("server.main._audiveris_command", return_value="audiveris"), patch(
                 "server.main.subprocess.run", side_effect=finish_without_export
             ):
-                with self.assertRaisesRegex(RuntimeError, "Could not export since transcription") as context:
+                with self.assertRaisesRegex(ValueError, "Could not export since transcription") as context:
                     recognize_score(source, "fallback")
         self.assertIn("Too few black pixels", str(context.exception))
         self.assertIn("Created scores: []", str(context.exception))
+
+
+class UploadValidationTests(unittest.TestCase):
+    def test_rejects_non_pdf_renamed_as_pdf(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "not-a-pdf.pdf"
+            path.write_bytes(b"this is a prank image")
+            with self.assertRaisesRegex(ValueError, "does not match"):
+                _validate_score_signature(path, ".pdf")
+
+    def test_extracts_audio_from_valid_video(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "performance.mp4"
+            source.touch()
+            probe = SimpleNamespace(
+                returncode=0,
+                stdout=json.dumps({
+                    "format": {"duration": "30.0"},
+                    "streams": [{"codec_type": "video"}, {"codec_type": "audio"}],
+                }),
+                stderr="",
+            )
+
+            def run_process(command, **_kwargs):
+                if command[0] == "ffprobe":
+                    return probe
+                Path(command[-1]).write_bytes(b"wav audio")
+                return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+            with patch("server.main.subprocess.run", side_effect=run_process) as run:
+                audio = extract_video_audio(source)
+
+            self.assertTrue(audio.is_file())
+            self.assertEqual(audio.read_bytes(), b"wav audio")
+            self.assertEqual(run.call_count, 2)
+
+    def test_rejects_video_without_audio(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "silent.mp4"
+            source.touch()
+            probe = SimpleNamespace(
+                returncode=0,
+                stdout=json.dumps({"format": {"duration": "30.0"}, "streams": [{"codec_type": "video"}]}),
+                stderr="",
+            )
+            with patch("server.main.subprocess.run", return_value=probe):
+                with self.assertRaisesRegex(ValueError, "no audio track"):
+                    extract_video_audio(source)
 
 
 class ActivationTests(unittest.TestCase):

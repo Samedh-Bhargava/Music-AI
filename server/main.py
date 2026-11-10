@@ -5,6 +5,7 @@ import csv
 import hmac
 import importlib.util
 import io
+import json
 import math
 import os
 import re
@@ -33,6 +34,7 @@ MAX_AUDIO_SECONDS = 600
 MAX_NOTES = 5000
 ALLOWED_IMAGE = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".pdf"}
 ALLOWED_AUDIO = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".aiff", ".aif"}
+ALLOWED_VIDEO = {".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi"}
 KEY_NAMES = {
     (0, "major"): "C major", (1, "major"): "G major", (2, "major"): "D major",
     (3, "major"): "A major", (4, "major"): "E major", (5, "major"): "B major",
@@ -325,8 +327,81 @@ def recognize_score(source: Path, fallback_title: str) -> dict[str, Any]:
             )
             if detail:
                 message += f"\nAudiveris output:\n{detail}"
+            if result.returncode == 0:
+                rejection = (
+                    "No readable music score was found in this image or PDF. Choose a clear page "
+                    "with visible printed notation, not a meme, photo, or unrelated document."
+                )
+                if detail:
+                    rejection += f"\nRecognition details:\n{detail}"
+                raise ValueError(rejection)
             raise RuntimeError(message)
         return parse_musicxml(candidates[0].read_bytes(), fallback_title)
+
+
+def _validate_score_signature(path: Path, extension: str) -> None:
+    signatures = {
+        ".png": lambda data: data.startswith(b"\x89PNG\r\n\x1a\n"),
+        ".jpg": lambda data: data.startswith(b"\xff\xd8\xff"),
+        ".jpeg": lambda data: data.startswith(b"\xff\xd8\xff"),
+        ".bmp": lambda data: data.startswith(b"BM"),
+        ".tif": lambda data: data.startswith((b"II*\x00", b"MM\x00*")),
+        ".tiff": lambda data: data.startswith((b"II*\x00", b"MM\x00*")),
+        ".pdf": lambda data: data.startswith(b"%PDF-"),
+    }
+    with path.open("rb") as source:
+        header = source.read(8)
+    if not signatures[extension](header):
+        raise ValueError(f"The file content does not match the .{extension.lstrip('.')} file type.")
+
+
+def extract_video_audio(source: Path) -> Path:
+    try:
+        probe = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-show_entries", "stream=codec_type", "-of", "json", str(source)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+    except FileNotFoundError as error:
+        raise RuntimeError("Video transcription requires ffprobe and ffmpeg. Use the provided Docker setup.") from error
+    except subprocess.TimeoutExpired as error:
+        raise ValueError("This video could not be inspected in time. Try a shorter, standard video file.") from error
+    if probe.returncode != 0:
+        raise ValueError("This file is not a readable video. Choose a valid video containing a performance.")
+    try:
+        metadata = json.loads(probe.stdout)
+    except (TypeError, ValueError) as error:
+        raise ValueError("This file's video metadata could not be read.") from error
+    streams = metadata.get("streams", [])
+    if not any(stream.get("codec_type") == "video" for stream in streams):
+        raise ValueError("The uploaded file does not contain a video stream.")
+    if not any(stream.get("codec_type") == "audio" for stream in streams):
+        raise ValueError("This video has no audio track to transcribe.")
+    duration = _float(metadata.get("format", {}).get("duration", ""))
+    if duration <= 0:
+        duration = max((_float(stream.get("duration", "")) for stream in streams), default=0.0)
+    if duration <= 0:
+        raise ValueError("The video duration could not be determined.")
+    if duration > MAX_AUDIO_SECONDS:
+        raise ValueError("Videos are limited to 10 minutes for transcription.")
+    audio_path = source.with_suffix(".wav")
+    try:
+        result = subprocess.run(
+            ["ffmpeg", "-nostdin", "-v", "error", "-i", str(source), "-vn", "-ac", "1", "-ar", "22050", "-t", str(MAX_AUDIO_SECONDS), "-c:a", "pcm_s16le", "-y", str(audio_path)],
+            capture_output=True,
+            text=True,
+            timeout=180,
+            check=False,
+        )
+    except FileNotFoundError as error:
+        raise RuntimeError("Video transcription requires ffmpeg. Use the provided Docker setup.") from error
+    except subprocess.TimeoutExpired as error:
+        raise ValueError("Extracting the video's audio took too long. Try a shorter or smaller video.") from error
+    if result.returncode != 0 or not audio_path.is_file() or audio_path.stat().st_size == 0:
+        raise ValueError("The video's audio could not be decoded. Try a standard MP4 or WebM video.")
+    return audio_path
 
 
 def _activation_for_note(output: Any, pitch: int, start: float, end: float) -> float | None:
@@ -363,7 +438,7 @@ def transcribe_audio(source: Path, title: str, tempo: int, meter: str, instrumen
             f"Details: {str(error)[:500]}"
         ) from error
     if not events:
-        raise RuntimeError("No notes were detected. Try a clearer recording with a single, prominent instrument.")
+        raise ValueError("No musical notes were detected. This may not be a music recording; try a clear recording with a prominent instrument.")
     numerator, denominator = (int(part) for part in meter.split("/"))
     bar_beats = numerator * 4 / denominator
     notes: list[dict[str, Any]] = []
@@ -397,7 +472,7 @@ def transcribe_audio(source: Path, title: str, tempo: int, meter: str, instrumen
             "confidence": activation,
         })
     if not notes:
-        raise RuntimeError("The audio model produced no usable notes.")
+        raise ValueError("No usable musical notes were detected. Check that the file contains music rather than speech, noise, or silence.")
     score = {
         "title": title[:100] or source.stem[:100] or "Audio transcription",
         "composer": "",
@@ -450,6 +525,12 @@ async def _save_upload(upload: UploadFile, allowed_extensions: set[str]) -> tupl
     if total == 0:
         temporary.cleanup()
         raise HTTPException(status_code=400, detail="The uploaded file is empty.")
+    if allowed_extensions == ALLOWED_IMAGE:
+        try:
+            _validate_score_signature(path, extension)
+        except ValueError as error:
+            temporary.cleanup()
+            raise HTTPException(status_code=415, detail=str(error)) from error
     return path, temporary
 
 
@@ -486,11 +567,13 @@ async def index() -> FileResponse:
 async def health() -> dict[str, Any]:
     audiveris = shutil.which(os.getenv("AUDIVERIS_BIN", "audiveris")) is not None
     basic_pitch = importlib.util.find_spec("basic_pitch") is not None
+    video_tools = shutil.which("ffmpeg") is not None and shutil.which("ffprobe") is not None
     return {
         "status": "ok",
         "models": {
             "score_ocr": {"available": audiveris, "engine": "Audiveris"},
             "audio_transcription": {"available": basic_pitch, "engine": "Spotify Basic Pitch"},
+            "video_transcription": {"available": basic_pitch and video_tools, "engine": "FFmpeg + Spotify Basic Pitch"},
         },
         "search": {"musicbrainz": True, "internet_archive": True, "youtube_metadata": True},
         "authentication": {"required": bool(os.getenv("SONORA_API_TOKEN"))},
@@ -510,7 +593,9 @@ async def analyze_score(
     title = Path(file.filename or "Recognized score").stem
     try:
         score = await run_in_threadpool(recognize_score, path, title)
-    except (RuntimeError, ValueError) as error:
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except RuntimeError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
     finally:
         temporary.cleanup()
@@ -539,11 +624,38 @@ async def analyze_audio(
     path, temporary = await _save_upload(file, ALLOWED_AUDIO)
     try:
         score, confidence = await run_in_threadpool(transcribe_audio, path, title or Path(file.filename or "").stem, tempo, meter, instrument)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
     except RuntimeError as error:
         raise HTTPException(status_code=503, detail=str(error)) from error
     finally:
         temporary.cleanup()
     return {"score": score, "confidence": confidence, "source": {"kind": "audio", "filename": file.filename}}
+
+
+@app.post("/api/analyze/video", dependencies=[Depends(require_api_token)])
+async def analyze_video(
+    file: UploadFile = File(...),
+    title: str = Form(default="", max_length=100),
+    tempo: int = Form(default=120, ge=30, le=240),
+    meter: str = Form(default="4/4", pattern=r"^\d{1,2}/(1|2|4|8|16)$"),
+    instrument: str = Form(default="Piano", max_length=30),
+) -> dict[str, Any]:
+    if instrument not in {"Piano", "Guitar", "Violin", "Flute", "Other"}:
+        raise HTTPException(status_code=422, detail="Choose a supported instrument.")
+    path, temporary = await _save_upload(file, ALLOWED_VIDEO)
+    try:
+        audio_path = await run_in_threadpool(extract_video_audio, path)
+        score, confidence = await run_in_threadpool(
+            transcribe_audio, audio_path, title or Path(file.filename or "").stem, tempo, meter, instrument
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    finally:
+        temporary.cleanup()
+    return {"score": score, "confidence": confidence, "source": {"kind": "video", "filename": file.filename}}
 
 
 def _lucene_phrase(value: str) -> str:
@@ -669,7 +781,7 @@ async def youtube_metadata(url: str = Query(min_length=8, max_length=2048)) -> d
         "thumbnail": metadata.get("thumbnail_url", ""),
         "url": canonical,
         "embedUrl": f"https://www.youtube-nocookie.com/embed/{video_id}",
-        "analysisNote": "YouTube provides metadata and playback only. To transcribe audio, upload an audio file you have the right to use.",
+        "analysisNote": "YouTube provides metadata and embedded playback only. Sonora can transcribe an audio or video file you provide, but cannot fetch audio directly from a YouTube link.",
     }
 
 
