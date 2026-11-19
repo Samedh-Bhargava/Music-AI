@@ -1,3 +1,4 @@
+import asyncio
 import io
 import json
 import tempfile
@@ -5,15 +6,17 @@ import zipfile
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import numpy as np
+from fastapi.testclient import TestClient
 
 from server.main import (
     _activation_for_note,
     _extract_musicxml,
     _midi_pitch,
     _validate_score_signature,
+    app,
     extract_video_audio,
     parse_musicxml,
     recognize_score,
@@ -77,6 +80,15 @@ class MusicXmlTests(unittest.TestCase):
         self.assertEqual(_midi_pitch("C", 0, "4"), ("C4", 60))
         self.assertEqual(_midi_pitch("D", -1, "3"), ("C#3", 49))
         self.assertIsNone(_midi_pitch("E", 0.5, "4"))
+
+    def test_preserves_scores_larger_than_the_previous_note_limit(self):
+        extra_chord_notes = (
+            b"<note><chord/><pitch><step>G</step><octave>4</octave></pitch>"
+            b"<duration>480</duration><type>quarter</type></note>"
+        ) * 5000
+        score = parse_musicxml(MUSICXML.replace(b"</measure>", extra_chord_notes + b"</measure>"), "fallback")
+
+        self.assertEqual(len(score["notes"]), 5003)
 
 
 class AudiverisTests(unittest.TestCase):
@@ -171,6 +183,79 @@ class UploadValidationTests(unittest.TestCase):
             with patch("server.main.subprocess.run", return_value=probe):
                 with self.assertRaisesRegex(ValueError, "no audio track"):
                     extract_video_audio(source)
+
+
+class VideoApiTests(unittest.TestCase):
+    def test_video_upload_is_transcribed_and_marked_as_video_source(self):
+        score = {
+            "title": "Performance",
+            "instrument": "Piano",
+            "tempo": 120,
+            "meter": "4/4",
+            "key": "C major",
+            "measureCount": 1,
+            "notes": [{"pitch": "C4", "measure": 1, "beat": 0, "duration": 1, "hand": "R"}],
+        }
+        with patch("server.main.extract_video_audio", return_value=Path("extracted.wav")) as extract, patch(
+            "server.main.transcribe_audio", return_value=(score, {"score": 0.9})
+        ) as transcribe:
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/analyze/video",
+                    files={"file": ("performance.mp4", b"video bytes", "video/mp4")},
+                    data={"tempo": "120", "meter": "4/4", "instrument": "Piano"},
+                )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["source"]["kind"], "video")
+        extract.assert_called_once()
+        transcribe.assert_called_once()
+
+    def test_rejects_analysis_when_another_job_is_using_the_model(self):
+        with patch("server.main._analysis_semaphore", asyncio.Semaphore(0)):
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/analyze/audio",
+                    files={"file": ("piece.wav", b"audio bytes", "audio/wav")},
+                )
+
+        self.assertEqual(response.status_code, 429)
+        self.assertIn("another", response.json()["detail"].lower())
+
+
+class ApiAuthenticationTests(unittest.TestCase):
+    def test_analysis_catalog_requires_signed_in_user_when_enabled(self):
+        with patch.dict("server.main.os.environ", {"SONORA_REQUIRE_AUTH": "true"}, clear=True):
+            with TestClient(app) as client:
+                response = client.get("/api/search", params={"q": "piano"})
+
+        self.assertEqual(response.status_code, 401)
+
+    def test_valid_supabase_session_can_use_protected_catalog(self):
+        class SupabaseUserClient:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args):
+                return None
+
+            async def get(self, _url, headers):
+                self.headers = headers
+                return SimpleNamespace(status_code=200)
+
+        with patch.dict("server.main.os.environ", {"SONORA_REQUIRE_AUTH": "true"}, clear=True), patch(
+            "server.main.httpx.AsyncClient", return_value=SupabaseUserClient()
+        ), patch("server.main._search_musicbrainz", new_callable=AsyncMock, return_value=[]), patch(
+            "server.main._search_archive", new_callable=AsyncMock, return_value=[]
+        ):
+            with TestClient(app) as client:
+                response = client.get(
+                    "/api/search",
+                    params={"q": "piano"},
+                    headers={"Authorization": "Bearer valid-session"},
+                )
+
+        self.assertEqual(response.status_code, 200)
 
 
 class ActivationTests(unittest.TestCase):

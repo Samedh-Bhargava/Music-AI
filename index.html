@@ -13,7 +13,7 @@
     :root {
       color-scheme: light;
       --ink: #1d2925;
-      --muted: #78817b;
+      --muted: #657068;
       --line: #e6eae5;
       --paper: #fff;
       --wash: #f5f7f4;
@@ -44,7 +44,7 @@
     .new-button { display: flex; width: 100%; height: 40px; align-items: center; justify-content: center; gap: 8px; margin-top: 31px; border: 0; border-radius: 7px; background: var(--green); color: white; cursor: pointer; font-size: 12px; font-weight: 700; }
     .new-button:hover, .primary:hover { background: var(--green-dark); }
     .new-button svg { width: 15px; height: 15px; }
-    .side-label { margin: 31px 10px 9px; color: #a0a8a2; font-size: 9px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+    .side-label { margin: 31px 10px 9px; color: #68736c; font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
     .nav { display: grid; gap: 4px; }
     .nav-item { display: flex; min-height: 39px; align-items: center; gap: 10px; padding: 0 10px; border: 0; border-radius: 7px; background: transparent; color: #68736c; cursor: pointer; font-size: 12px; font-weight: 500; text-align: left; }
     .nav-item svg { width: 16px; height: 16px; color: #87918a; }
@@ -76,7 +76,7 @@
     .card { border: 1px solid var(--line); border-radius: 10px; background: var(--paper); box-shadow: 0 3px 12px rgba(32,48,38,.025); }
     .toolbar-card { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px 15px; }
     .project-title-wrap { min-width: 120px; flex: 1; }
-    .field-label { display: block; margin-bottom: 5px; color: #9ba39c; font-size: 9px; font-weight: 600; letter-spacing: .45px; text-transform: uppercase; }
+    .field-label { display: block; margin-bottom: 5px; color: #68736c; font-size: 10px; font-weight: 600; letter-spacing: .45px; text-transform: uppercase; }
     .title-input { width: 100%; padding: 0; border: 0; background: transparent; color: var(--ink); font: 700 15px "Manrope", sans-serif; }
     .title-input:focus { outline-offset: 5px; }
     .settings { display: flex; align-items: end; gap: 8px; }
@@ -87,7 +87,7 @@
     .score-card { min-width: 0; overflow: hidden; }
     .card-head { display: flex; min-height: 52px; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 15px; border-bottom: 1px solid #edf0ec; }
     .card-head h2 { margin: 0; font: 700 12px "Manrope", sans-serif; }
-    .card-head p { margin: 4px 0 0; color: #929b94; font-size: 10px; }
+    .card-head p { margin: 4px 0 0; color: #68736c; font-size: 10px; }
     .card-head-actions { display: flex; align-items: center; gap: 6px; }
     .score-scroll { max-height: 480px; overflow: auto; padding: 14px; background: #fbfcfa; }
     .measure-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(205px, 1fr)); gap: 10px; }
@@ -107,7 +107,7 @@
     .meta-chip { padding: 5px 8px; border: 1px solid #e9ece6; border-radius: 5px; background: #fbfcfa; color: #768078; font-size: 9px; }
     .side-stack { display: grid; gap: 12px; }
     .notes-card { overflow: hidden; }
-    .note-count { color: #929b94; font-size: 10px; }
+    .note-count { color: #68736c; font-size: 10px; }
     .notes-scroll { max-height: 362px; overflow: auto; }
     .notes-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
     .notes-table th { position: sticky; z-index: 1; top: 0; padding: 8px 5px; background: #fbfcfa; color: #929b94; font-size: 8px; font-weight: 700; letter-spacing: .4px; text-align: left; text-transform: uppercase; }
@@ -173,6 +173,13 @@
     .practice-progress > span { display: block; width: 0; height: 100%; background: var(--green); transition: width .1s linear; }
     .practice-empty-actions { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
     .delete-message { margin: 0; font-size: 12px; line-height: 1.6; }
+    .cloud-form { display: grid; gap: 11px; }
+    .cloud-form label { display: grid; gap: 5px; color: #68736c; font-size: 10px; font-weight: 600; }
+    .cloud-form input { width: 100%; height: 34px; padding: 0 9px; border: 1px solid #dfe5df; border-radius: 6px; background: #fff; font-size: 11px; }
+    .cloud-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+    #cloud-account-button { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+    .cloud-status { padding: 10px; border: 1px solid #edf0ec; border-radius: 7px; background: #fbfcfa; color: #68736c; font-size: 10px; line-height: 1.55; }
+    .cloud-status.error { border-color: #f0dfdc; background: var(--red-soft); color: var(--red); }
     .toast { position: fixed; z-index: 10; right: 20px; bottom: 20px; max-width: min(420px, calc(100vw - 40px)); padding: 11px 14px; border: 1px solid #dfe8df; border-radius: 8px; background: white; box-shadow: 0 8px 26px rgba(24,36,28,.12); color: #405147; font-size: 11px; line-height: 1.5; }
     .toast[hidden] { display: none; }
     .ai-status { padding: 5px 8px; border: 1px solid #e6eae5; border-radius: 5px; background: #fff; color: #78817b; font-size: 9px; white-space: nowrap; }
@@ -193,10 +200,6 @@
     .youtube-preview iframe { width: 100%; aspect-ratio: 16/9; border: 0; border-radius: 6px; background: #101714; }
     .youtube-preview h3 { margin: 0; font: 700 12px "Manrope", sans-serif; }
     .youtube-preview p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
-    .api-settings { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; padding: 11px; border: 1px solid #edf0ec; border-radius: 7px; background: #fbfcfa; }
-    .api-settings label { color: #758078; font-size: 9px; font-weight: 600; }
-    .api-settings input { display: block; width: 100%; height: 31px; margin-top: 5px; padding: 0 8px; border: 1px solid #dfe5df; border-radius: 5px; background: #fff; font-size: 10px; }
-    .api-settings .button { align-self: end; justify-self: start; }
     .analysis-section { display: grid; gap: 9px; padding: 12px; border: 1px solid #edf0ec; border-radius: 7px; }
     .analysis-section h3 { margin: 0; font: 700 11px "Manrope", sans-serif; }
     .analysis-settings { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
@@ -213,7 +216,7 @@
     .dialog-body label { color: #68736c; font-size: 10px; font-weight: 600; }
     .dialog-body input:not([type=file]), .dialog-body select, .dialog-body textarea { display: block; width: 100%; margin-top: 6px; padding: 9px 10px; border: 1px solid #dfe5df; border-radius: 6px; background: white; color: #39453d; font-size: 11px; }
     .dialog-body textarea { min-height: 84px; resize: vertical; line-height: 1.5; }
-    .dialog-help { margin: -4px 0 0; color: #929b94; font-size: 10px; line-height: 1.55; }
+    .dialog-help { margin: -4px 0 0; color: #657068; font-size: 11px; line-height: 1.6; }
     .file-label { display: inline-flex !important; min-height: 34px; align-items: center; gap: 7px; padding: 0 11px; border: 1px solid #dfe5df; border-radius: 6px; background: #fbfcfa; color: #4c5a50 !important; cursor: pointer; }
     .file-label input { width: 1px; height: 1px; opacity: 0; position: absolute; }
     .dialog-foot { display: flex; justify-content: flex-end; gap: 7px; padding: 12px 18px; border-top: 1px solid #edf0ec; }
@@ -227,7 +230,7 @@
       .toolbar-card { flex-wrap: wrap; }
       .settings { margin-left: auto; }
     }
-    @media (max-width: 760px) {
+    @media (max-width: 900px) {
       .app { display: block; padding-bottom: 57px; }
       .sidebar { position: fixed; z-index: 4; top: auto; right: 0; bottom: 0; left: 0; height: 55px; flex-direction: row; justify-content: center; padding: 5px 10px; border-top: 1px solid var(--line); border-right: 0; background: rgba(255,255,255,.96); backdrop-filter: blur(10px); }
       .brand, .new-button, .side-label, .side-projects, .sidebar-note { display: none; }
@@ -253,6 +256,7 @@
       .page-head .button { min-height: 30px; }
     }
     @media (max-width: 420px) {
+      .topbar { padding-right: 9px; padding-left: 9px; }
       .crumb { font-size: 10px; }
       .top-actions .button span { display: none; }
       .top-actions .button svg { margin: 0; }
@@ -262,7 +266,6 @@
       .setting { min-width: 66px; width: 74px; }
       .setting.wide { min-width: 85px; width: 90px; }
       .measure-grid { grid-template-columns: 1fr; }
-      .api-settings { grid-template-columns: 1fr; }
       .analysis-settings { grid-template-columns: 1fr 1fr; }
       .measure svg { max-height: 170px; }
       .practice-bar { flex-wrap: wrap; gap: 6px; padding: 10px; }
@@ -308,6 +311,7 @@
         <div class="top-actions">
           <span class="save-state" id="save-state" role="status">Saved on this device</span>
           <span class="ai-status offline" id="ai-status">Local AI offline</span>
+          <button class="button" type="button" data-action="open-cloud" id="cloud-account-button">Sign in</button>
           <button class="button" type="button" data-action="open-analysis">Analyze</button>
           <button class="button" type="button" data-action="import" aria-label="Import score"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14.5v4A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5v-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Import</span></button>
           <button class="button primary" type="button" data-action="export-menu" aria-label="Export score"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v12m0 0 4-4m-4 4-4-4M5 20h14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Export</span></button>
@@ -333,10 +337,35 @@
     <div class="dialog-body"><p class="delete-message" id="delete-message">This score will be removed from this browser.</p><p class="dialog-help">This cannot be undone. Export a Sonora backup first if you want to keep a copy.</p></div>
     <div class="dialog-foot"><button class="button" type="button" data-action="cancel-delete">Keep score</button><button class="button danger" type="button" data-action="confirm-delete">Delete score</button></div>
   </dialog>
+  <dialog id="cloud-dialog">
+    <div class="dialog-head"><h2>Account &amp; cloud scores</h2><button class="icon-button" type="button" data-action="close-dialog" aria-label="Close">×</button></div>
+    <div class="dialog-body">
+      <p class="dialog-help">Create or sign in to a Sonora account to sync scores across your devices. This email/password account is separate from your Supabase dashboard login.</p>
+      <section class="analysis-section">
+        <h3 id="cloud-auth-heading">Sign in or create an account</h3>
+        <div class="cloud-form">
+          <label>Email<input id="cloud-email" type="email" autocomplete="email" maxlength="254" required placeholder="you@example.com"></label>
+          <label>Password<input id="cloud-password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required placeholder="At least 8 characters"></label>
+          <div class="cloud-actions">
+            <button class="button primary" type="button" data-action="cloud-sign-in">Sign in</button>
+            <button class="button" type="button" data-action="cloud-sign-up">Create account</button>
+            <button class="button" type="button" data-action="cloud-reset-password">Reset password</button>
+          </div>
+        </div>
+      </section>
+      <section class="analysis-section">
+        <h3>Cloud library</h3>
+        <div class="cloud-status" id="cloud-status" role="status">Not connected. Your current scores remain saved on this device.</div>
+        <div class="cloud-actions"><button class="button" type="button" data-action="cloud-sync">Sync now</button><button class="button danger" type="button" data-action="cloud-sign-out">Sign out</button></div>
+        <div class="error-text" id="cloud-error" role="status"></div>
+      </section>
+    </div>
+    <div class="dialog-foot"><button class="button" type="button" data-action="close-dialog">Done</button></div>
+  </dialog>
   <dialog id="analysis-dialog">
     <div class="dialog-head"><h2>Analyze with local AI</h2><button class="icon-button" type="button" data-action="close-dialog" aria-label="Close">×</button></div>
     <div class="dialog-body">
-      <p class="dialog-help">Your file is sent only to the Sonora server you configure. Sheet recognition uses Audiveris; audio transcription uses Spotify Basic Pitch. First model use may take a few minutes.</p>
+      <p class="dialog-help">Your file is sent to Sonora’s analysis service for processing. Sheet recognition uses Audiveris; audio and video transcription use Basic Pitch, with video audio extracted using FFmpeg. First model use may take a few minutes.</p>
       <section class="analysis-section">
         <h3>Choose input and settings</h3>
         <label class="file-label"><span id="analysis-file-label">Choose score image or PDF</span><input id="analysis-file" type="file" accept="image/*,.pdf"></label>
@@ -349,22 +378,13 @@
         <button class="button primary" type="button" data-action="run-analysis">Recognize score</button>
         <div class="error-text" id="analysis-error" role="status"></div>
       </section>
-      <section class="analysis-section">
-        <h3>Connect your local or deployed backend</h3>
-        <div class="api-settings">
-          <label>Server URL<input id="api-base" type="url" autocomplete="url" placeholder="http://127.0.0.1:8000"></label>
-          <label>Server access token<input id="api-token" type="password" autocomplete="off" placeholder="Optional; stored for this tab"></label>
-          <button class="button" type="button" data-action="save-api-config">Save &amp; check connection</button>
-        </div>
-        <p class="dialog-help">The access token is kept in this tab only. Do not expose an unauthenticated analysis server to the public internet.</p>
-      </section>
     </div>
     <div class="dialog-foot"><button class="button" type="button" data-action="close-dialog">Close</button></div>
   </dialog>
   <dialog id="import-dialog">
     <div class="dialog-head"><h2>Import a score</h2><button class="icon-button" type="button" data-action="close-dialog" aria-label="Close">×</button></div>
     <div class="dialog-body">
-      <p class="dialog-help">Import an uncompressed MusicXML (.musicxml or .xml) score, or a Sonora JSON backup. These files are read in this browser and are not uploaded. Use <b>Analyze</b> for score images/PDFs or audio with the local model server.</p>
+      <p class="dialog-help">Import an uncompressed MusicXML (.musicxml or .xml) score, or a Sonora JSON backup. These files are read in this browser and are not uploaded. Use <b>Analyze</b> for score images/PDFs or audio.</p>
       <label class="file-label">Choose MusicXML or JSON file<input id="import-file" type="file" accept=".musicxml,.xml,.json,application/vnd.recordare.musicxml+xml,application/json"></label>
       <div class="import-divider">OR ENTER A NOTE SEQUENCE</div>
       <label for="sequence-input">Notes in order<input id="sequence-input" type="text" placeholder="C4:1 D4:1 E4:1 G4:2"></label>
@@ -389,6 +409,10 @@
     (() => {
       "use strict";
       const STORAGE_KEY = "sonora.score-studio.v1";
+      const CLOUD_SESSION_KEY = "sonora.cloud-session.v1";
+      const SUPABASE_URL = "https://wltervpxulekpwsxrope.supabase.co";
+      const SUPABASE_PUBLIC_KEY = "sb_publishable_hweBVG6gVkRyfGc2O2DG8Q_MXl0QGxR";
+      const MAX_SCORE_NOTES = 20000;
       const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
       const NOTE_OPTIONS = [];
       for (let octave = 0; octave <= 8; octave++) {
@@ -403,7 +427,7 @@
       const VELOCITIES = { pp: 34, p: 48, mp: 64, mf: 80, f: 98, ff: 114 };
       const RANGES = { Piano: [21, 108], Guitar: [40, 88], Violin: [55, 103], Flute: [60, 96], Other: [0, 127] };
       const KEY_FIFTHS = { "C major": 0, "G major": 1, "D major": 2, "A major": 3, "E major": 4, "B major": 5, "F# major": 6, "C# major": 7, "F major": -1, "Bb major": -2, "Eb major": -3, "Ab major": -4, "Db major": -5, "Gb major": -6, "Cb major": -7, "A minor": 0, "E minor": 1, "B minor": 2, "F# minor": 3, "C# minor": 4, "G# minor": 5, "D# minor": 6, "A# minor": 7, "D minor": -1, "G minor": -2, "C minor": -3, "F minor": -4, "Bb minor": -5, "Eb minor": -6, "Ab minor": -7 };
-      const state = { projects: [], currentId: null, view: "studio", filter: "", undo: [], redo: [], audio: null, sources: [], playTimer: null, stopTimer: null, playing: false, playStarted: 0, playLength: 0, playbackStartBeat: 0, playbackEndBeat: 0, practiceStart: 1, practiceEnd: 0, practiceSpeed: 1, practiceHand: "both", practiceLoop: false, pendingDeleteId: null, noteNamesVisible: false, toastTimer: null, apiHealth: null };
+      const state = { projects: [], currentId: null, view: "studio", filter: "", undo: [], redo: [], audio: null, sources: [], playTimer: null, stopTimer: null, playing: false, playStarted: 0, playLength: 0, playbackStartBeat: 0, playbackEndBeat: 0, practiceStart: 1, practiceEnd: 0, practiceSpeed: 1, practiceHand: "both", practiceLoop: false, pendingDeleteId: null, deletedIds: [], noteNamesVisible: false, toastTimer: null, apiHealth: null, cloud: { config: null, session: null, user: null, ready: false, syncTimer: null, syncing: false, syncAgain: false } };
       const PLAYBACK_SOUNDS = ["Piano", "Guitar", "Violin", "Flute", "Synth"];
       const $ = selector => document.querySelector(selector);
       const $$ = selector => Array.from(document.querySelectorAll(selector));
@@ -439,8 +463,9 @@
       });
 
       function normalizeProject(value) {
-        if (!value || typeof value !== "object" || !Array.isArray(value.notes)) throw new Error("This file is not a valid Sonora score.");
+        if (!value || typeof value !== "object" || Array.isArray(value) || !Array.isArray(value.notes)) throw new Error("This file is not a valid Sonora score.");
         const notes = value.notes.map(note => {
+          if (!note || typeof note !== "object" || Array.isArray(note)) throw new Error("The score contains an invalid note.");
           const pitch = String(note.pitch || "C4");
           const midi = noteMidi(pitch);
           const measure = Number(note.measure || 1);
@@ -457,7 +482,7 @@
             confidence: note.confidence != null && Number.isFinite(Number(note.confidence)) ? Math.max(0, Math.min(1, Number(note.confidence))) : null
           };
         });
-        if (notes.length > 5000) throw new Error("A score can contain at most 5,000 notes.");
+        if (notes.length > MAX_SCORE_NOTES) throw new Error(`A score can contain at most ${MAX_SCORE_NOTES.toLocaleString()} notes.`);
         const measureCount = Math.max(1, Number(value.measureCount) || 0, ...notes.map(note => note.measure));
         return {
           id: uid(), title: String(value.title || "Imported score").slice(0, 100),
@@ -473,12 +498,13 @@
         };
       }
 
-      function persist() {
+      function persist(options = {}) {
         try {
           const project = current();
           if (project) project.updatedAt = new Date().toISOString();
-          localStorage.setItem(STORAGE_KEY, JSON.stringify({ projects: state.projects, currentId: state.currentId, noteNamesVisible: state.noteNamesVisible }));
-          $("#save-state").textContent = "Saved on this device";
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ projects: state.projects, currentId: state.currentId, noteNamesVisible: state.noteNamesVisible, deletedIds: state.deletedIds }));
+          $("#save-state").textContent = state.cloud.ready ? "Saved locally · syncing…" : "Saved on this device";
+          if (options.sync !== false && state.cloud.user) scheduleCloudSync();
         } catch (error) {
           $("#save-state").textContent = "Could not save";
           showToast(`Could not save to this browser: ${error.message}`);
@@ -486,25 +512,44 @@
       }
       function loadState() {
         let hasValidLibrary = false;
+        let storedLibraryExists = false;
         try {
           const stored = localStorage.getItem(STORAGE_KEY);
+          storedLibraryExists = stored !== null;
           if (stored) {
             const data = JSON.parse(stored);
             if (data && Array.isArray(data.projects)) {
-              state.projects = data.projects.map(project => normalizeStoredProject(project));
+              const ids = new Set();
+              let skippedProjects = 0;
+              state.projects = data.projects.flatMap(project => {
+                try {
+                  const normalized = normalizeStoredProject(project);
+                  if (ids.has(normalized.id)) throw new Error("Duplicate score ID.");
+                  ids.add(normalized.id);
+                  return [normalized];
+                } catch (_) {
+                  skippedProjects++;
+                  return [];
+                }
+              });
               state.currentId = state.projects.some(project => project.id === data.currentId) ? data.currentId : (state.projects[0]?.id || null);
               state.noteNamesVisible = data.noteNamesVisible === true;
+              state.deletedIds = Array.isArray(data.deletedIds) ? data.deletedIds.filter(id => typeof id === "string") : [];
               hasValidLibrary = true;
+              if (skippedProjects) {
+                showToast(`${skippedProjects} saved score${skippedProjects === 1 ? " was" : "s were"} unreadable and skipped. Your other scores are available.`);
+              }
             }
           }
         } catch (error) {
-          showToast(`Saved scores could not be loaded: ${error.message}`);
+          showToast(`Saved scores could not be loaded: ${error.message}. The original saved data was left untouched.`);
         }
         if (!hasValidLibrary) {
           const project = defaultProject();
           state.projects = [project];
           state.currentId = project.id;
-          persist();
+          if (!storedLibraryExists) persist();
+          else $("#save-state").textContent = "Recovery score · original data untouched";
         }
       }
       function normalizeStoredProject(project) {
@@ -514,21 +559,267 @@
         normalized.updatedAt = project.updatedAt || "";
         return normalized;
       }
+      function updateCloudUi(message = "", error = false) {
+        const accountButton = $("#cloud-account-button");
+        const status = $("#cloud-status");
+        if (accountButton) accountButton.textContent = state.cloud.user?.email || "Sign in";
+        if (status) {
+          status.textContent = message || (state.cloud.ready
+            ? `Signed in as ${state.cloud.user.email}. Score changes sync to your cloud library.`
+            : state.cloud.user
+              ? `Signed in as ${state.cloud.user.email}. Cloud sync is not complete.`
+              : "Not connected. Your current scores remain saved on this device.");
+          status.classList.toggle("error", error);
+        }
+      }
+      function readCloudConfig() {
+        localStorage.removeItem("sonora.cloud-config.v1");
+        state.cloud.config = { url: SUPABASE_URL, anonKey: SUPABASE_PUBLIC_KEY };
+        try {
+          const session = JSON.parse(localStorage.getItem(CLOUD_SESSION_KEY) || "null");
+          if (session && typeof session.access_token === "string" && typeof session.refresh_token === "string") state.cloud.session = session;
+        } catch (error) {
+          showToast(`Cloud sign-in could not be restored: ${error.message}`);
+        }
+      }
+      function cloudHeaders(token = state.cloud.session?.access_token) {
+        const headers = new Headers({ apikey: state.cloud.config.anonKey });
+        if (token) headers.set("Authorization", `Bearer ${token}`);
+        return headers;
+      }
+      async function fetchWithTimeout(url, options, timeoutMs) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          return await fetch(url, { ...options, signal: controller.signal });
+        } catch (error) {
+          if (controller.signal.aborted) throw new Error("The request timed out. Try again or choose a shorter file.");
+          throw error;
+        } finally {
+          clearTimeout(timeout);
+        }
+      }
+      async function cloudRequest(path, options = {}) {
+        const headers = cloudHeaders(options.token);
+        if (options.body !== undefined) headers.set("Content-Type", "application/json");
+        if (options.prefer) headers.set("Prefer", options.prefer);
+        let response;
+        try {
+          response = await fetchWithTimeout(`${state.cloud.config.url}${path}`, {
+            method: options.method || "GET",
+            headers,
+            body: options.body === undefined ? undefined : JSON.stringify(options.body)
+          }, 15000);
+        } catch (error) {
+          throw new Error(error.message.startsWith("The request timed out")
+            ? `Supabase did not respond in time. ${error.message}`
+            : `Could not connect to Supabase. Check the project URL and internet connection. ${error.message}`);
+        }
+        const text = await response.text();
+        let result = null;
+        if (text) {
+          try { result = JSON.parse(text); }
+          catch (_) { throw new Error("Supabase returned an unreadable response."); }
+        }
+        if (!response.ok) throw new Error(result?.msg || result?.message || result?.error_description || result?.error || `Supabase returned HTTP ${response.status}.`);
+        return result;
+      }
+      async function cloudAuthRequest(path, body, token) {
+        return cloudRequest(`/auth/v1/${path}`, { method: "POST", body, token });
+      }
+      function storeCloudSession(session) {
+        state.cloud.session = {
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+          expires_at: Number(session.expires_at) || Math.floor(Date.now() / 1000) + Number(session.expires_in || 3600),
+          token_type: session.token_type || "bearer"
+        };
+        state.cloud.user = session.user || null;
+        localStorage.setItem(CLOUD_SESSION_KEY, JSON.stringify(state.cloud.session));
+      }
+      async function ensureCloudSession() {
+        if (!state.cloud.session || !state.cloud.config) throw new Error("Sign in to your cloud account first.");
+        if (state.cloud.session.expires_at < Math.floor(Date.now() / 1000) + 60) {
+          const refreshed = await cloudAuthRequest("token?grant_type=refresh_token", { refresh_token: state.cloud.session.refresh_token }, null);
+          if (!refreshed?.access_token || !refreshed?.refresh_token) throw new Error("Supabase could not refresh your session. Sign in again.");
+          storeCloudSession(refreshed);
+        }
+        const user = await cloudRequest("/auth/v1/user");
+        if (!user?.id) throw new Error("Supabase returned no signed-in user.");
+        state.cloud.user = user;
+        return user;
+      }
+      async function cloudLibraryRequest() {
+        const records = await cloudRequest("/rest/v1/sonora_libraries?select=projects,deleted_ids,current_id,note_names_visible&limit=1");
+        if (!Array.isArray(records)) throw new Error("The cloud library response was not a list. Check the Supabase schema setup.");
+        return records[0] || null;
+      }
+      function mergeCloudLibrary(remote) {
+        const deleted = new Set([...state.deletedIds, ...(Array.isArray(remote?.deleted_ids) ? remote.deleted_ids : [])]);
+        const byId = new Map();
+        for (const project of Array.isArray(remote?.projects) ? remote.projects : []) {
+          const normalized = normalizeStoredProject(project);
+          byId.set(normalized.id, normalized);
+        }
+        for (const project of state.projects) {
+          const existing = byId.get(project.id);
+          const localDate = Date.parse(project.updatedAt || "") || 0;
+          const remoteDate = Date.parse(existing?.updatedAt || "") || 0;
+          if (!existing || localDate >= remoteDate) byId.set(project.id, project);
+        }
+        const mergedProjects = [...byId.values()].filter(project => !deleted.has(project.id));
+        if (mergedProjects.length > 100) throw new Error("Your merged cloud and local libraries exceed Sonora’s 100-score limit. Export a backup and remove scores before syncing.");
+        state.deletedIds = [...deleted];
+        state.projects = mergedProjects;
+        const requestedId = state.currentId || remote?.current_id;
+        state.currentId = state.projects.some(project => project.id === requestedId)
+          ? requestedId
+          : state.projects[0]?.id || null;
+        state.noteNamesVisible = state.noteNamesVisible || remote?.note_names_visible === true;
+      }
+      async function syncCloudLibrary() {
+        if (state.cloud.syncing) { state.cloud.syncAgain = true; return; }
+        state.cloud.syncing = true;
+        let succeeded = false;
+        $("#cloud-error").textContent = "";
+        updateCloudUi("Syncing scores with Supabase…");
+        try {
+          const user = await ensureCloudSession();
+          const remote = await cloudLibraryRequest();
+          mergeCloudLibrary(remote);
+          persist({ sync: false });
+          const payload = {
+            user_id: user.id,
+            projects: state.projects,
+            deleted_ids: state.deletedIds,
+            current_id: state.currentId,
+            note_names_visible: state.noteNamesVisible,
+            updated_at: new Date().toISOString()
+          };
+          await cloudRequest("/rest/v1/sonora_libraries?on_conflict=user_id", {
+            method: "POST",
+            body: payload,
+            prefer: "resolution=merge-duplicates,return=minimal"
+          });
+          state.cloud.ready = true;
+          succeeded = true;
+          $("#save-state").textContent = "Cloud synced";
+          updateCloudUi(`Signed in as ${user.email}. ${state.projects.length} score${state.projects.length === 1 ? "" : "s"} synced.`);
+          render();
+        } catch (error) {
+          state.cloud.ready = false;
+          updateCloudUi(error.message, true);
+          $("#save-state").textContent = "Cloud sync failed";
+          throw error;
+        } finally {
+          state.cloud.syncing = false;
+          if (succeeded && state.cloud.syncAgain) {
+            state.cloud.syncAgain = false;
+            scheduleCloudSync();
+          } else if (!succeeded) {
+            state.cloud.syncAgain = false;
+          }
+        }
+      }
+      function scheduleCloudSync() {
+        if (!state.cloud.user) return;
+        clearTimeout(state.cloud.syncTimer);
+        state.cloud.syncTimer = setTimeout(() => {
+          syncCloudLibrary().catch(error => showToast(`Cloud sync failed: ${error.message}`));
+        }, 700);
+      }
+      function populateCloudFields() {
+        $("#cloud-email").value = state.cloud.user?.email || "";
+        $("#cloud-error").textContent = "";
+        updateCloudUi();
+      }
+      async function cloudSignIn(createAccount = false) {
+        const errorNode = $("#cloud-error");
+        errorNode.textContent = "";
+        try {
+          const email = $("#cloud-email").value.trim();
+          const password = $("#cloud-password").value;
+          if (!email || !$("#cloud-email").checkValidity()) throw new Error("Enter a valid email address.");
+          if (password.length < 8) throw new Error("Password must be at least 8 characters.");
+          updateCloudUi(createAccount ? "Creating your account…" : "Signing in…");
+          const response = await cloudAuthRequest(
+            createAccount ? "signup" : "token?grant_type=password",
+            { email, password },
+            null
+          );
+          if (!response?.access_token || !response?.refresh_token) {
+            updateCloudUi("Account created. Check your email to confirm the account, then sign in.");
+            return;
+          }
+          storeCloudSession(response);
+          state.cloud.ready = false;
+          await syncCloudLibrary();
+          $("#cloud-password").value = "";
+        } catch (error) {
+          errorNode.textContent = error.message;
+          updateCloudUi(error.message, true);
+        }
+      }
+      async function cloudResetPassword() {
+        const errorNode = $("#cloud-error");
+        errorNode.textContent = "";
+        try {
+          const email = $("#cloud-email").value.trim();
+          if (!email || !$("#cloud-email").checkValidity()) throw new Error("Enter your account email first.");
+          await cloudAuthRequest("recover", { email, redirect_to: window.location.origin });
+          updateCloudUi("If an account exists for that email, Supabase will send a password-reset link.");
+        } catch (error) {
+          errorNode.textContent = error.message;
+          updateCloudUi(error.message, true);
+        }
+      }
+      async function cloudSignOut() {
+        let logoutError = null;
+        if (state.cloud.session && state.cloud.config) {
+          try { await cloudRequest("/auth/v1/logout", { method: "POST" }); }
+          catch (error) {
+            if (!/401|invalid|expired/i.test(error.message)) logoutError = error;
+          }
+        }
+        state.cloud.session = null;
+        state.cloud.user = null;
+        state.cloud.ready = false;
+        localStorage.removeItem(CLOUD_SESSION_KEY);
+        updateCloudUi("Signed out. Your scores remain saved on this device.");
+        $("#save-state").textContent = "Saved on this device";
+        if (logoutError) showToast(`Signed out on this device, but Supabase could not revoke the remote session: ${logoutError.message}`);
+      }
+      async function restoreCloudAccount() {
+        readCloudConfig();
+        populateCloudFields();
+        if (!state.cloud.config || !state.cloud.session) return;
+        try {
+          await ensureCloudSession();
+          await syncCloudLibrary();
+        } catch (error) {
+          state.cloud.ready = false;
+          updateCloudUi(`Cloud account needs attention: ${error.message}`, true);
+        }
+      }
       function defaultApiBase() {
         return window.location.protocol === "file:" ? "http://127.0.0.1:8000" : window.location.origin;
       }
       function apiBase() {
-        return (sessionStorage.getItem("sonora.api-base") || defaultApiBase()).replace(/\/+$/, "");
+        return defaultApiBase();
       }
       async function apiRequest(path, options = {}) {
         const headers = new Headers(options.headers || {});
-        const token = sessionStorage.getItem("sonora.api-token");
-        if (token) headers.set("X-API-Key", token);
+        const { timeoutMs = 15000, ...requestOptions } = options;
+        if (state.cloud.session) {
+          await ensureCloudSession();
+          headers.set("Authorization", `Bearer ${state.cloud.session.access_token}`);
+        }
         let response;
         try {
-          response = await fetch(`${apiBase()}${path}`, { ...options, headers });
+          response = await fetchWithTimeout(`${apiBase()}${path}`, { ...requestOptions, headers }, timeoutMs);
         } catch (error) {
-          throw new Error(`Could not reach the Sonora server at ${apiBase()}. Start the backend or check the server URL. ${error.message}`);
+          if (error.message.startsWith("The request timed out")) throw error;
+          throw new Error(`Sonora’s analysis service could not be reached. Check your connection and try again. ${error.message}`);
         }
         let data;
         try { data = await response.json(); }
@@ -555,24 +846,6 @@
           return false;
         }
       }
-      function configureApiFields() {
-        $("#api-base").value = sessionStorage.getItem("sonora.api-base") || defaultApiBase();
-        $("#api-token").value = sessionStorage.getItem("sonora.api-token") || "";
-      }
-      async function saveApiConfig() {
-        const rawBase = $("#api-base").value.trim();
-        let parsed;
-        try { parsed = new URL(rawBase); }
-        catch (_) { throw new Error("Enter a valid server URL, such as http://127.0.0.1:8000."); }
-        if (!["http:", "https:"].includes(parsed.protocol) || parsed.username || parsed.password) {
-          throw new Error("Use an HTTP(S) server URL without embedded credentials.");
-        }
-        const base = `${parsed.origin}${parsed.pathname.replace(/\/+$/, "")}`;
-        sessionStorage.setItem("sonora.api-base", base);
-        sessionStorage.setItem("sonora.api-token", $("#api-token").value);
-        if (!await checkBackend()) throw new Error("Could not connect to that Sonora server. Check the URL and confirm the server is running.");
-        showToast("Sonora server connected. Model availability is shown at the top of the app.");
-      }
       async function runAnalysis() {
         const file = $("#analysis-file").files?.[0];
         const kind = $("#analysis-kind").value;
@@ -598,7 +871,7 @@
         button.textContent = kind === "score" ? "Recognizing notation…" : "Transcribing performance…";
         try {
           const endpoint = kind === "score" ? "/api/analyze/score" : kind === "video" ? "/api/analyze/video" : "/api/analyze/audio";
-          const response = await apiRequest(endpoint, { method: "POST", body: form });
+          const response = await apiRequest(endpoint, { method: "POST", body: form, timeoutMs: 15 * 60 * 1000 });
           const project = normalizeProject(response.score);
           project.analysis = response.confidence || null;
           project.source = response.source || { kind };
@@ -659,7 +932,7 @@
         resultNode.innerHTML = `<div class="result-empty">Looking up video details…</div>`;
         try {
           const response = await apiRequest(`/api/youtube?url=${encodeURIComponent(value)}`);
-          resultNode.innerHTML = `<iframe title="${esc(response.title)}" src="${esc(response.embedUrl)}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe><h3>${esc(response.title)}</h3><p>${esc(response.author || "")}</p><p>${esc(response.analysisNote)} If you have an authorized copy, upload its audio or video file to transcribe it.</p><div class="practice-empty-actions"><button class="button" type="button" data-action="open-audio-analysis">Upload audio/video to transcribe</button><a class="button" href="${esc(response.url)}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a></div>`;
+          resultNode.innerHTML = `<iframe title="${esc(response.title)}" src="${esc(response.embedUrl)}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe><h3>${esc(response.title)}</h3><p>${esc(response.author || "")}</p><p>${esc(response.analysisNote)} For a video you own, download it through <a href="https://studio.youtube.com/" target="_blank" rel="noopener noreferrer">YouTube Studio</a>, then upload the authorized video file here. For another creator’s video, ask them for an authorized copy.</p><div class="practice-empty-actions"><button class="button" type="button" data-action="open-video-analysis">Upload video file</button><button class="button" type="button" data-action="open-audio-analysis">Upload audio file</button><a class="button" href="${esc(response.url)}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a></div>`;
         } catch (error) {
           resultNode.innerHTML = `<div class="notice-item error">${esc(error.message)}</div>`;
         } finally {
@@ -960,7 +1233,7 @@
           if (noteMidi(pitch) === null || !Number.isFinite(duration) || duration <= 0 || duration > 16) throw new Error(`“${token}” has an invalid pitch or duration.`);
           return { pitch, duration };
         });
-        if (project.notes.length + parsed.length > 5000) throw new Error("A score can contain at most 5,000 notes.");
+        if (project.notes.length + parsed.length > MAX_SCORE_NOTES) throw new Error(`A score can contain at most ${MAX_SCORE_NOTES.toLocaleString()} notes.`);
         snapshot();
         let measure = project.notes.reduce((max, note) => Math.max(max, note.measure), 1);
         let beat = 0;
@@ -1124,10 +1397,9 @@
         return `${commonHead("Practice room", `${esc(project.title)} · ${esc(project.instrument)} · ${project.tempo} BPM`, `<button class="button primary" type="button" data-action="${state.playing ? "stop" : "play"}">${state.playing ? "■ Stop" : "▶ Play section"}</button>`)}<div class="practice-layout"><section class="card"><div class="card-head"><div><h2>Practice section</h2><p>Choose a passage and tap any note to hear it.</p></div><span class="note-count">${notes.length} note${notes.length === 1 ? "" : "s"}</span></div><div class="practice-progress" role="progressbar" aria-label="Practice playback progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="practice-progress"></span></div><div class="practice-controls"><label>From measure<input id="practice-start" type="number" min="1" max="${maxMeasure}" value="${startMeasure}"></label><label>To measure<input id="practice-end" type="number" min="1" max="${maxMeasure}" value="${endMeasure}"></label><label>Hands<select id="practice-hand"><option value="both" ${hand === "both" ? "selected" : ""}>Both hands</option><option value="R" ${hand === "R" ? "selected" : ""}>Right hand</option><option value="L" ${hand === "L" ? "selected" : ""}>Left hand</option></select></label><label>Practice speed<select id="practice-speed"><option value="0.5" ${speed === 0.5 ? "selected" : ""}>Slow · 0.5×</option><option value="0.75" ${speed === 0.75 ? "selected" : ""}>Steady · 0.75×</option><option value="1" ${speed === 1 ? "selected" : ""}>Score tempo · 1×</option></select></label><label class="practice-loop"><input id="practice-loop" type="checkbox" ${state.practiceLoop ? "checked" : ""}> Repeat this section</label></div><div class="practice-notes">${rows || `<div class="empty-notes">${project.notes.length ? "No notes in this section for the selected hand. Try Both hands or another measure range." : "Add notes in Studio to start practicing."}</div>`}</div></section><aside class="card practice-tip"><h2>Make it your practice</h2><p>Start slowly with one hand, then widen the measure range and try both hands. Turn on repeat to loop the selected passage. Tap a note in the list to hear that pitch on its own.</p><p style="margin-top:10px">Playback uses a synthesized ${esc(project.playbackSound)}-style tone, not a sampled instrument recording.</p><div class="practice-empty-actions"><button class="button" type="button" data-action="open-studio">Edit this score</button></div></aside></div>`;
       }
       function renderDiscover() {
-        return `${commonHead("Discover music", "Find music, preview performances, or create a score from an audio recording.", `<span class="ai-status ${state.apiHealth ? "ready" : "offline"}">${state.apiHealth ? "Connected to local server" : "Connect local server"}</span>`)}
+        return `${commonHead("Discover music", "Find music, preview performances, or create a score from audio or video.")}
           <section class="card"><div class="card-head"><div><h2>Find scores and recordings</h2><p>Search catalog metadata from MusicBrainz and the Internet Archive.</p></div></div><form class="discovery-search" id="catalog-form" style="padding:12px"><input id="catalog-query" type="search" minlength="2" maxlength="120" placeholder="Try “Für Elise” or “Debussy Clair de Lune”" aria-label="Search music catalogs" required><button class="button primary" type="submit" data-action="search-catalog">Search catalogs</button></form><div class="search-results" id="catalog-results"><div class="result-empty">Search results link to the original source; this app does not download copyrighted scores.</div></div></section>
-          <div class="discover-grid"><section class="card"><div class="card-head"><div><h2>Create a score from audio or video</h2><p>Upload a recording or video performance to detect notes and make an editable score.</p></div></div><div class="practice-tip"><p>For the clearest results, use a short recording with one prominent instrument. Videos must include an audio track and be under 10 minutes.</p><p style="margin-top:8px">Unsupported, unreadable, or non-musical inputs are rejected when no score or notes can be recognized. This is not a classifier of prank intent.</p><div class="practice-empty-actions"><button class="button primary" type="button" data-action="open-audio-analysis">Choose audio/video file</button></div></div></section><section class="card"><div class="card-head"><div><h2>Preview a YouTube link</h2><p>Preview performances here; direct YouTube audio extraction is not available.</p></div></div><form class="discovery-search" id="youtube-form" style="padding:12px"><input id="youtube-url" type="url" placeholder="https://www.youtube.com/watch?v=…" aria-label="YouTube video URL" required><button class="button" type="submit" data-action="youtube-lookup">Preview link</button></form><div class="youtube-preview" id="youtube-result"><div class="result-empty">Paste a video link to load its title, channel, and embedded player. YouTube’s official embed provides playback and metadata, not an audio file for transcription. If you have an authorized copy, upload the audio or video file.</div></div></section></div>
-          <aside class="card practice-tip" style="margin-top:13px"><h2>Connect a model server</h2><p>Score images and audio recordings use local open-source models. Start the Docker backend, then use <b>Analyze</b> to connect this page to it. Your analysis files stay on that server; catalog search and YouTube metadata are online lookups.</p><div class="practice-empty-actions"><button class="button" type="button" data-action="open-analysis">Configure AI server</button></div></aside>`;
+          <div class="discover-grid"><section class="card"><div class="card-head"><div><h2>Create a score from audio or video</h2><p>Upload a recording or video performance to detect notes and make an editable score.</p></div></div><div class="practice-tip"><p>For the clearest results, use a short recording with one prominent instrument. Videos must include an audio track and be under 10 minutes.</p><p style="margin-top:8px">For a YouTube video you own, download the file through <a href="https://studio.youtube.com/" target="_blank" rel="noopener noreferrer">YouTube Studio</a> and choose it here. For someone else’s video, ask the creator for an authorized copy; Sonora does not download audio from YouTube links.</p><p style="margin-top:8px">Unsupported, unreadable, or non-musical inputs are rejected when no score or notes can be recognized. This is not a classifier of prank intent.</p><div class="practice-empty-actions"><button class="button primary" type="button" data-action="open-audio-analysis">Choose audio file</button><button class="button" type="button" data-action="open-video-analysis">Choose video file</button></div></div></section><section class="card"><div class="card-head"><div><h2>Preview a YouTube link</h2><p>Preview performances here; direct YouTube audio extraction is not available.</p></div></div><form class="discovery-search" id="youtube-form" style="padding:12px"><input id="youtube-url" type="url" placeholder="https://www.youtube.com/watch?v=…" aria-label="YouTube video URL" required><button class="button" type="submit" data-action="youtube-lookup">Preview link</button></form><div class="youtube-preview" id="youtube-result"><div class="result-empty">Paste a video link to load its title, channel, and embedded player. YouTube’s official embed provides playback and metadata, not an audio file for transcription. If you have an authorized copy, upload the audio or video file.</div></div></section></div>`;
       }
       function render() {
         $("#breadcrumb").textContent = state.view === "library" ? "My scores" : state.view === "practice" ? "Practice" : state.view === "discover" ? "Discover" : "Studio";
@@ -1151,7 +1423,7 @@
       function addNote(chord = false) {
         const project = current();
         if (!project) { showToast("Create a score first."); return; }
-        if (project.notes.length >= 5000) { showToast("A score can contain at most 5,000 notes."); return; }
+        if (project.notes.length >= MAX_SCORE_NOTES) { showToast(`A score can contain at most ${MAX_SCORE_NOTES.toLocaleString()} notes.`); return; }
         snapshot();
         const notes = sortedNotes(project);
         const last = notes.at(-1);
@@ -1268,6 +1540,7 @@
         const title = project.title;
         if (state.playing && state.currentId === id) stopPlayback(false);
         state.projects = state.projects.filter(item => item.id !== id);
+        if (!state.deletedIds.includes(id)) state.deletedIds.push(id);
         if (state.currentId === id) state.currentId = state.projects[0]?.id || null;
         state.undo = [];
         state.redo = [];
@@ -1441,12 +1714,17 @@
         const name = action.dataset.action;
         try {
           if (name === "new-project") { $("#project-error").textContent = ""; openDialog("project-dialog"); $("#new-title").focus(); }
+          else if (name === "open-cloud") { populateCloudFields(); openDialog("cloud-dialog"); }
+          else if (name === "cloud-sign-in") cloudSignIn(false);
+          else if (name === "cloud-sign-up") cloudSignIn(true);
+          else if (name === "cloud-reset-password") cloudResetPassword();
+          else if (name === "cloud-sync") syncCloudLibrary().catch(error => showToast(`Cloud sync failed: ${error.message}`));
+          else if (name === "cloud-sign-out") cloudSignOut().catch(error => { $("#cloud-error").textContent = error.message; updateCloudUi(error.message, true); });
           else if (name === "import") { $("#import-error").textContent = ""; openDialog("import-dialog"); }
-          else if (name === "open-analysis" || name === "open-audio-analysis") {
+          else if (name === "open-analysis" || name === "open-audio-analysis" || name === "open-video-analysis") {
             $("#analysis-error").textContent = "";
-            configureApiFields();
-            if (name === "open-audio-analysis") {
-              $("#analysis-kind").value = "audio";
+            if (name !== "open-analysis") {
+              $("#analysis-kind").value = name === "open-video-analysis" ? "video" : "audio";
               $("#analysis-kind").dispatchEvent(new Event("change", { bubbles: true }));
             }
             openDialog("analysis-dialog");
@@ -1454,7 +1732,6 @@
           }
           else if (name === "toggle-note-names") { state.noteNamesVisible = !state.noteNamesVisible; persist(); render(); }
           else if (name === "run-analysis") runAnalysis();
-          else if (name === "save-api-config") saveApiConfig().catch(error => showToast(error.message));
           else if (name === "close-dialog") closeDialogs();
           else if (name === "cancel-delete") { state.pendingDeleteId = null; closeDialogs(); }
           else if (name === "confirm-delete") confirmDeleteProject();
@@ -1585,6 +1862,10 @@
       loadState();
       render();
       checkBackend();
+      restoreCloudAccount();
+      window.addEventListener("focus", () => {
+        if (state.cloud.ready) syncCloudLibrary().catch(error => showToast(`Cloud sync failed: ${error.message}`));
+      });
     })();
   </script>
 </body>

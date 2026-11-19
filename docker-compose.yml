@@ -5,5 +5,5 @@ services:
       - "127.0.0.1:8000:8000"
     environment:
       AUDIVERIS_BIN: /opt/audiveris/bin/Audiveris
-      SONORA_API_TOKEN: ${SONORA_API_TOKEN:-}
+      SONORA_REQUIRE_AUTH: ${SONORA_REQUIRE_AUTH:-false}
     restart: unless-stopped

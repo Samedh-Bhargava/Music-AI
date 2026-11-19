@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import csv
-import hmac
 import importlib.util
 import io
 import json
@@ -14,6 +13,7 @@ import subprocess
 import tempfile
 import time
 import zipfile
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
@@ -23,7 +23,6 @@ import httpx
 import numpy as np
 from defusedxml import ElementTree as SafeXML
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from starlette.concurrency import run_in_threadpool
 
@@ -31,7 +30,9 @@ from starlette.concurrency import run_in_threadpool
 ROOT = Path(__file__).resolve().parent.parent
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 MAX_AUDIO_SECONDS = 600
-MAX_NOTES = 5000
+MAX_NOTES = 20000
+SUPABASE_URL = "https://wltervpxulekpwsxrope.supabase.co"
+SUPABASE_PUBLIC_KEY = "sb_publishable_hweBVG6gVkRyfGc2O2DG8Q_MXl0QGxR"
 ALLOWED_IMAGE = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".pdf"}
 ALLOWED_AUDIO = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".aiff", ".aif"}
 ALLOWED_VIDEO = {".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi"}
@@ -50,6 +51,7 @@ KEY_NAMES = {
 PITCH_NAMES = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 VELOCITY_DYNAMICS = ((38, "pp"), (54, "p"), (70, "mp"), (88, "mf"), (106, "f"), (128, "ff"))
 _musicbrainz_lock = asyncio.Lock()
+_analysis_semaphore = asyncio.Semaphore(1)
 _musicbrainz_last_request = 0.0
 
 
@@ -241,7 +243,7 @@ def parse_musicxml(data: bytes, fallback_title: str) -> dict[str, Any]:
     if not notes:
         raise ValueError("The score engine found no readable pitched notes.")
     if len(notes) > MAX_NOTES:
-        notes = notes[:MAX_NOTES]
+        raise ValueError(f"The recognized score contains more than {MAX_NOTES:,} notes. Use a shorter passage or split the score.")
     return {
         "title": title[:100] or "Recognized score",
         "composer": composer[:100],
@@ -445,7 +447,7 @@ def transcribe_audio(source: Path, title: str, tempo: int, meter: str, instrumen
     activations: list[float] = []
     for start, end, midi_pitch, velocity, _bends in events:
         if len(notes) >= MAX_NOTES:
-            break
+            raise ValueError(f"The transcription contains more than {MAX_NOTES:,} notes. Use a shorter passage or split the recording.")
         midi_pitch = int(midi_pitch)
         if not 0 <= midi_pitch <= 127:
             continue
@@ -534,10 +536,34 @@ async def _save_upload(upload: UploadFile, allowed_extensions: set[str]) -> tupl
     return path, temporary
 
 
-async def require_api_token(x_api_key: str | None = Header(default=None)) -> None:
-    expected = os.getenv("SONORA_API_TOKEN", "")
-    if expected and (not x_api_key or not hmac.compare_digest(x_api_key, expected)):
-        raise HTTPException(status_code=401, detail="A valid Sonora server token is required.")
+async def require_authenticated_user(
+    authorization: str | None = Header(default=None),
+) -> None:
+    if os.getenv("SONORA_REQUIRE_AUTH", "").casefold() not in {"1", "true", "yes"}:
+        return
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Sign in to use Sonora's analysis services.")
+    async with httpx.AsyncClient(timeout=8) as client:
+        try:
+            response = await client.get(
+                f"{SUPABASE_URL}/auth/v1/user",
+                headers={"apikey": SUPABASE_PUBLIC_KEY, "Authorization": authorization},
+            )
+        except httpx.HTTPError as error:
+            raise HTTPException(status_code=503, detail="Could not verify your Sonora account. Try again shortly.") from error
+    if response.status_code != 200:
+        raise HTTPException(status_code=401, detail="Your Sonora session expired. Sign in again.")
+
+
+async def limit_analysis_concurrency() -> AsyncIterator[None]:
+    try:
+        await asyncio.wait_for(_analysis_semaphore.acquire(), timeout=0.1)
+    except asyncio.TimeoutError as error:
+        raise HTTPException(status_code=429, detail="Another score or recording is being analyzed. Please try again shortly.") from error
+    try:
+        yield
+    finally:
+        _analysis_semaphore.release()
 
 
 @asynccontextmanager
@@ -549,13 +575,6 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Sonora Local Music AI", version="1.0.0", lifespan=lifespan)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["Content-Type", "X-API-Key"],
-)
 
 
 @app.get("/")
@@ -576,11 +595,11 @@ async def health() -> dict[str, Any]:
             "video_transcription": {"available": basic_pitch and video_tools, "engine": "FFmpeg + Spotify Basic Pitch"},
         },
         "search": {"musicbrainz": True, "internet_archive": True, "youtube_metadata": True},
-        "authentication": {"required": bool(os.getenv("SONORA_API_TOKEN"))},
+        "authentication": {"required": os.getenv("SONORA_REQUIRE_AUTH", "").casefold() in {"1", "true", "yes"}},
     }
 
 
-@app.post("/api/analyze/score", dependencies=[Depends(require_api_token)])
+@app.post("/api/analyze/score", dependencies=[Depends(require_authenticated_user), Depends(limit_analysis_concurrency)])
 async def analyze_score(
     file: UploadFile = File(...),
     tempo: int = Form(default=96, ge=30, le=240),
@@ -611,7 +630,7 @@ async def analyze_score(
     }
 
 
-@app.post("/api/analyze/audio", dependencies=[Depends(require_api_token)])
+@app.post("/api/analyze/audio", dependencies=[Depends(require_authenticated_user), Depends(limit_analysis_concurrency)])
 async def analyze_audio(
     file: UploadFile = File(...),
     title: str = Form(default="", max_length=100),
@@ -633,7 +652,7 @@ async def analyze_audio(
     return {"score": score, "confidence": confidence, "source": {"kind": "audio", "filename": file.filename}}
 
 
-@app.post("/api/analyze/video", dependencies=[Depends(require_api_token)])
+@app.post("/api/analyze/video", dependencies=[Depends(require_authenticated_user), Depends(limit_analysis_concurrency)])
 async def analyze_video(
     file: UploadFile = File(...),
     title: str = Form(default="", max_length=100),
@@ -725,7 +744,7 @@ async def _search_archive(query: str, limit: int) -> list[dict[str, Any]]:
     return results
 
 
-@app.get("/api/search", dependencies=[Depends(require_api_token)])
+@app.get("/api/search", dependencies=[Depends(require_authenticated_user)])
 async def search_scores(
     q: str = Query(min_length=2, max_length=120),
     limit: int = Query(default=5, ge=1, le=10),
@@ -748,7 +767,7 @@ async def search_scores(
     return {"query": q, "results": results, "warnings": warnings}
 
 
-@app.get("/api/youtube", dependencies=[Depends(require_api_token)])
+@app.get("/api/youtube", dependencies=[Depends(require_authenticated_user)])
 async def youtube_metadata(url: str = Query(min_length=8, max_length=2048)) -> dict[str, Any]:
     parsed = urlparse(url)
     host = (parsed.hostname or "").lower()
