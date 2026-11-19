@@ -22,15 +22,12 @@ from urllib.parse import urlparse
 import httpx
 import numpy as np
 from defusedxml import ElementTree as SafeXML
-from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
 from starlette.concurrency import run_in_threadpool
 
 
 ROOT = Path(__file__).resolve().parent.parent
-MAX_UPLOAD_BYTES = 25 * 1024 * 1024
-MAX_AUDIO_SECONDS = 600
-MAX_NOTES = 20000
 SUPABASE_URL = "https://wltervpxulekpwsxrope.supabase.co"
 SUPABASE_PUBLIC_KEY = "sb_publishable_hweBVG6gVkRyfGc2O2DG8Q_MXl0QGxR"
 ALLOWED_IMAGE = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".pdf"}
@@ -158,10 +155,12 @@ def parse_musicxml(data: bytes, fallback_title: str) -> dict[str, Any]:
     tempo = 96
     dynamic = "mf"
     notes: list[dict[str, Any]] = []
+    highest_exported_measure = 0
     measures = [element for element in list(first_part) if _local_name(element.tag) == "measure"]
     for measure_index, measure in enumerate(measures, start=1):
         raw_number = measure.attrib.get("number", "")
         measure_number = int(raw_number) if raw_number.isdigit() and int(raw_number) > 0 else measure_index
+        highest_exported_measure = max(highest_exported_measure, measure_number)
         cursor = 0.0
         previous_note_start: float | None = None
         for item in list(measure):
@@ -175,13 +174,13 @@ def parse_musicxml(data: bytes, fallback_title: str) -> dict[str, Any]:
                     key = KEY_NAMES.get((fifths, mode), key)
                 time_node = _child(item, "time")
                 if time_node is not None:
-                    numerator = max(1, min(32, int(_float(_text(time_node, "beats"), numerator))))
-                    denominator = max(1, min(32, int(_float(_text(time_node, "beat-type"), denominator))))
+                    numerator = max(1, int(_float(_text(time_node, "beats"), numerator)))
+                    denominator = max(1, int(_float(_text(time_node, "beat-type"), denominator)))
             elif kind == "direction":
                 per_minute = _child(item, "per-minute")
                 if per_minute is not None:
                     parsed_tempo = int(_float(per_minute.text or "", tempo))
-                    if 30 <= parsed_tempo <= 240:
+                    if parsed_tempo >= 1:
                         tempo = parsed_tempo
                 dynamics = next((node for node in item.iter() if _local_name(node.tag) == "dynamics"), None)
                 if dynamics is not None:
@@ -190,7 +189,7 @@ def parse_musicxml(data: bytes, fallback_title: str) -> dict[str, Any]:
                         dynamic = marking
             elif kind == "sound":
                 parsed_tempo = int(_float(item.attrib.get("tempo", ""), tempo))
-                if 30 <= parsed_tempo <= 240:
+                if parsed_tempo >= 1:
                     tempo = parsed_tempo
             elif kind in {"backup", "forward"}:
                 amount = _float(_text(item, "duration")) / divisions
@@ -242,8 +241,6 @@ def parse_musicxml(data: bytes, fallback_title: str) -> dict[str, Any]:
                     cursor += duration
     if not notes:
         raise ValueError("The score engine found no readable pitched notes.")
-    if len(notes) > MAX_NOTES:
-        raise ValueError(f"The recognized score contains more than {MAX_NOTES:,} notes. Use a shorter passage or split the score.")
     return {
         "title": title[:100] or "Recognized score",
         "composer": composer[:100],
@@ -251,7 +248,7 @@ def parse_musicxml(data: bytes, fallback_title: str) -> dict[str, Any]:
         "tempo": tempo,
         "meter": f"{numerator}/{denominator}",
         "key": key,
-        "measureCount": max(measure["measure"] for measure in notes),
+        "measureCount": max(highest_exported_measure, max(measure["measure"] for measure in notes)),
         "notes": notes,
     }
 
@@ -279,7 +276,6 @@ def recognize_score(source: Path, fallback_title: str) -> dict[str, Any]:
                 [command, "-batch", "-transcribe", "-export", "-output", str(output), str(source)],
                 capture_output=True,
                 text=True,
-                timeout=300,
                 check=False,
             )
         except subprocess.TimeoutExpired as error:
@@ -386,15 +382,12 @@ def extract_video_audio(source: Path) -> Path:
         duration = max((_float(stream.get("duration", "")) for stream in streams), default=0.0)
     if duration <= 0:
         raise ValueError("The video duration could not be determined.")
-    if duration > MAX_AUDIO_SECONDS:
-        raise ValueError("Videos are limited to 10 minutes for transcription.")
     audio_path = source.with_suffix(".wav")
     try:
         result = subprocess.run(
-            ["ffmpeg", "-nostdin", "-v", "error", "-i", str(source), "-vn", "-ac", "1", "-ar", "22050", "-t", str(MAX_AUDIO_SECONDS), "-c:a", "pcm_s16le", "-y", str(audio_path)],
+            ["ffmpeg", "-nostdin", "-v", "error", "-i", str(source), "-vn", "-ac", "1", "-ar", "22050", "-c:a", "pcm_s16le", "-y", str(audio_path)],
             capture_output=True,
             text=True,
-            timeout=180,
             check=False,
         )
     except FileNotFoundError as error:
@@ -433,7 +426,14 @@ def transcribe_audio(source: Path, title: str, tempo: int, meter: str, instrumen
         from basic_pitch.inference import Model, predict
 
         model = _cached_basic_pitch_model(str(ICASSP_2022_MODEL_PATH), Model)
-        model_output, _, events = predict(source, model_or_model_path=model, midi_tempo=tempo)
+        model_output, _, events = predict(
+            source,
+            model_or_model_path=model,
+            midi_tempo=tempo,
+            onset_threshold=0.5,
+            frame_threshold=0.35,
+            minimum_note_length=58,
+        )
     except Exception as error:
         raise RuntimeError(
             "Basic Pitch could not load or run. Use the Python 3.11 Docker setup and ensure its model dependencies installed correctly. "
@@ -443,11 +443,22 @@ def transcribe_audio(source: Path, title: str, tempo: int, meter: str, instrumen
         raise ValueError("No musical notes were detected. This may not be a music recording; try a clear recording with a prominent instrument.")
     numerator, denominator = (int(part) for part in meter.split("/"))
     bar_beats = numerator * 4 / denominator
+    duration_seconds = 0.0
+    try:
+        duration_probe = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", str(source)],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        if duration_probe.returncode == 0:
+            duration_seconds = _float(duration_probe.stdout.strip())
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        duration_seconds = 0.0
     notes: list[dict[str, Any]] = []
     activations: list[float] = []
     for start, end, midi_pitch, velocity, _bends in events:
-        if len(notes) >= MAX_NOTES:
-            raise ValueError(f"The transcription contains more than {MAX_NOTES:,} notes. Use a shorter passage or split the recording.")
         midi_pitch = int(midi_pitch)
         if not 0 <= midi_pitch <= 127:
             continue
@@ -457,7 +468,7 @@ def transcribe_audio(source: Path, title: str, tempo: int, meter: str, instrumen
         quantized_end = max(quantized_start + 0.25, round(end_beats * 4) / 4)
         measure = int(quantized_start // bar_beats) + 1
         beat = round(quantized_start - (measure - 1) * bar_beats, 4)
-        duration = round(min(16.0, quantized_end - quantized_start), 4)
+        duration = round(quantized_end - quantized_start, 4)
         activation = _activation_for_note(model_output, midi_pitch, float(start), float(end))
         if activation is not None:
             activations.append(activation)
@@ -475,6 +486,11 @@ def transcribe_audio(source: Path, title: str, tempo: int, meter: str, instrumen
         })
     if not notes:
         raise ValueError("No usable musical notes were detected. Check that the file contains music rather than speech, noise, or silence.")
+    highest_note_measure = max(note["measure"] for note in notes)
+    duration_measure_count = 1
+    if duration_seconds > 0:
+        duration_beats = duration_seconds * tempo / 60
+        duration_measure_count = max(1, int(math.ceil(duration_beats / bar_beats)))
     score = {
         "title": title[:100] or source.stem[:100] or "Audio transcription",
         "composer": "",
@@ -482,7 +498,7 @@ def transcribe_audio(source: Path, title: str, tempo: int, meter: str, instrumen
         "tempo": tempo,
         "meter": meter,
         "key": "C major",
-        "measureCount": max(note["measure"] for note in notes),
+        "measureCount": max(highest_note_measure, duration_measure_count),
         "notes": notes,
     }
     confidence = {
@@ -518,8 +534,6 @@ async def _save_upload(upload: UploadFile, allowed_extensions: set[str]) -> tupl
         with path.open("wb") as target:
             while chunk := await upload.read(1024 * 1024):
                 total += len(chunk)
-                if total > MAX_UPLOAD_BYTES:
-                    raise HTTPException(status_code=413, detail="File is larger than the 25 MB limit.")
                 target.write(chunk)
     except Exception:
         temporary.cleanup()
@@ -602,8 +616,8 @@ async def health() -> dict[str, Any]:
 @app.post("/api/analyze/score", dependencies=[Depends(require_authenticated_user), Depends(limit_analysis_concurrency)])
 async def analyze_score(
     file: UploadFile = File(...),
-    tempo: int = Form(default=96, ge=30, le=240),
-    meter: str = Form(default="4/4", pattern=r"^\d{1,2}/(1|2|4|8|16)$"),
+    tempo: int = Form(default=96, ge=1),
+    meter: str = Form(default="4/4", pattern=r"^\d+/\d+$"),
     key: str = Form(default="C major", max_length=20),
     instrument: str = Form(default="Piano", max_length=30),
 ) -> dict[str, Any]:
@@ -634,8 +648,8 @@ async def analyze_score(
 async def analyze_audio(
     file: UploadFile = File(...),
     title: str = Form(default="", max_length=100),
-    tempo: int = Form(default=120, ge=30, le=240),
-    meter: str = Form(default="4/4", pattern=r"^\d{1,2}/(1|2|4|8|16)$"),
+    tempo: int = Form(default=120, ge=1),
+    meter: str = Form(default="4/4", pattern=r"^\d+/\d+$"),
     instrument: str = Form(default="Piano", max_length=30),
 ) -> dict[str, Any]:
     if instrument not in {"Piano", "Guitar", "Violin", "Flute", "Other"}:
@@ -656,8 +670,8 @@ async def analyze_audio(
 async def analyze_video(
     file: UploadFile = File(...),
     title: str = Form(default="", max_length=100),
-    tempo: int = Form(default=120, ge=30, le=240),
-    meter: str = Form(default="4/4", pattern=r"^\d{1,2}/(1|2|4|8|16)$"),
+    tempo: int = Form(default=120, ge=1),
+    meter: str = Form(default="4/4", pattern=r"^\d+/\d+$"),
     instrument: str = Form(default="Piano", max_length=30),
 ) -> dict[str, Any]:
     if instrument not in {"Piano", "Guitar", "Violin", "Flute", "Other"}:
@@ -767,12 +781,11 @@ async def search_scores(
     return {"query": q, "results": results, "warnings": warnings}
 
 
-@app.get("/api/youtube", dependencies=[Depends(require_authenticated_user)])
-async def youtube_metadata(url: str = Query(min_length=8, max_length=2048)) -> dict[str, Any]:
+def _validated_youtube_video_id(url: str) -> tuple[str, str]:
     parsed = urlparse(url)
     host = (parsed.hostname or "").lower()
     if parsed.scheme != "https" or host not in {"youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be", "youtube-nocookie.com", "www.youtube-nocookie.com"}:
-        raise HTTPException(status_code=422, detail="Enter an HTTPS YouTube video URL.")
+        raise ValueError("Enter an HTTPS YouTube video URL.")
     if host == "youtu.be":
         video_id = parsed.path.strip("/").split("/")[0]
     elif parsed.path.startswith("/embed/") or parsed.path.startswith("/shorts/"):
@@ -782,8 +795,17 @@ async def youtube_metadata(url: str = Query(min_length=8, max_length=2048)) -> d
 
         video_id = parse_qs(parsed.query).get("v", [""])[0]
     if not re.fullmatch(r"[A-Za-z0-9_-]{11}", video_id):
-        raise HTTPException(status_code=422, detail="The URL does not contain a valid YouTube video ID.")
+        raise ValueError("The URL does not contain a valid YouTube video ID.")
     canonical = f"https://www.youtube.com/watch?v={video_id}"
+    return video_id, canonical
+
+
+@app.get("/api/youtube", dependencies=[Depends(require_authenticated_user)])
+async def youtube_metadata(url: str = Query(min_length=8, max_length=2048)) -> dict[str, Any]:
+    try:
+        video_id, canonical = _validated_youtube_video_id(url)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
     async with httpx.AsyncClient(timeout=10, follow_redirects=False) as client:
         try:
             response = await client.get("https://www.youtube.com/oembed", params={"url": canonical, "format": "json"})
@@ -800,8 +822,129 @@ async def youtube_metadata(url: str = Query(min_length=8, max_length=2048)) -> d
         "thumbnail": metadata.get("thumbnail_url", ""),
         "url": canonical,
         "embedUrl": f"https://www.youtube-nocookie.com/embed/{video_id}",
-        "analysisNote": "YouTube provides metadata and embedded playback only. Sonora can transcribe an audio or video file you provide, but cannot fetch audio directly from a YouTube link.",
+        "analysisNote": "Sonora can only process this link when you confirm that you own or are authorized to use the video.",
     }
+
+
+def _download_authorized_youtube(url: str, directory: Path, video: bool) -> tuple[Path, str]:
+    yt_dlp = shutil.which("yt-dlp")
+    if not yt_dlp:
+        raise RuntimeError("YouTube processing requires yt-dlp. Rebuild the Docker image with the updated dependencies.")
+    output = directory / ("source.%(ext)s" if video else "source_audio.%(ext)s")
+    format_selector = (
+        "bv*[vcodec*=avc1][height<=720]+ba[acodec*=mp4a]/b[ext=mp4]/bv*+ba/b"
+        if video
+        else "bestaudio[ext=m4a]/bestaudio/best"
+    )
+    command = [
+        yt_dlp,
+        "--no-playlist",
+        "-f",
+        format_selector,
+        "--output",
+        str(output),
+        "--restrict-filenames",
+        "--no-warnings",
+        url,
+    ]
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=False)
+    except FileNotFoundError as error:
+        raise RuntimeError("YouTube processing requires yt-dlp and ffmpeg.") from error
+    except subprocess.TimeoutExpired as error:
+        raise ValueError("YouTube download took too long. Try a shorter authorized video.") from error
+    if result.returncode != 0:
+        detail = "\n".join(part.strip() for part in (result.stderr, result.stdout) if part.strip())
+        raise ValueError(detail[-1800:] or "YouTube rejected the download. Check that the link is available and you are authorized.")
+    candidates = [
+        path for path in directory.iterdir()
+        if path.is_file() and path.suffix.lower() not in {".json", ".description", ".part", ".ytdl"}
+    ]
+    if not candidates:
+        raise ValueError("YouTube did not provide a downloadable file.")
+    downloaded = max(candidates, key=lambda path: path.stat().st_size)
+    probe = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", str(downloaded)],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    duration = _float(probe.stdout.strip())
+    if duration <= 0:
+        raise ValueError("YouTube media duration could not be determined.")
+    return downloaded, probe.stdout.strip()
+
+
+@app.post("/api/youtube/download", dependencies=[Depends(require_authenticated_user)])
+async def download_youtube(
+    background_tasks: BackgroundTasks,
+    url: str = Form(min_length=8, max_length=2048),
+    authorized: bool = Form(default=False),
+):
+    if not authorized:
+        raise HTTPException(status_code=422, detail="Confirm that you own or are authorized to download this YouTube video.")
+    try:
+        _validated_youtube_video_id(url)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    temporary = tempfile.TemporaryDirectory(prefix="sonora-youtube-download-")
+    directory = Path(temporary.name)
+    try:
+        downloaded, _ = await run_in_threadpool(_download_authorized_youtube, url, directory, True)
+    except (ValueError, RuntimeError) as error:
+        temporary.cleanup()
+        raise HTTPException(status_code=422 if isinstance(error, ValueError) else 503, detail=str(error)) from error
+    background_tasks.add_task(temporary.cleanup)
+    return FileResponse(downloaded, media_type="video/mp4", filename=f"sonora-youtube-{downloaded.stem}.mp4")
+
+
+@app.post("/api/youtube/transcribe", dependencies=[Depends(require_authenticated_user), Depends(limit_analysis_concurrency)])
+async def transcribe_youtube(
+    url: str = Form(min_length=8, max_length=2048),
+    authorized: bool = Form(default=False),
+    title: str = Form(default="", max_length=100),
+    tempo: int = Form(default=120, ge=1),
+    meter: str = Form(default="4/4", pattern=r"^\d+/\d+$"),
+    instrument: str = Form(default="Piano", max_length=30),
+) -> dict[str, Any]:
+    if not authorized:
+        raise HTTPException(status_code=422, detail="Confirm that you own or are authorized to analyze this YouTube video.")
+    if instrument not in {"Piano", "Guitar", "Violin", "Flute", "Other"}:
+        raise HTTPException(status_code=422, detail="Choose a supported instrument.")
+    try:
+        video_id, canonical = _validated_youtube_video_id(url)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    temporary = tempfile.TemporaryDirectory(prefix="sonora-youtube-transcribe-")
+    directory = Path(temporary.name)
+    try:
+        downloaded, _ = await run_in_threadpool(_download_authorized_youtube, canonical, directory, False)
+        audio_path = directory / "audio.wav"
+        result = await run_in_threadpool(
+            subprocess.run,
+            ["ffmpeg", "-nostdin", "-v", "error", "-i", str(downloaded), "-vn", "-ac", "1", "-ar", "22050", "-c:a", "pcm_s16le", "-y", str(audio_path)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0 or not audio_path.is_file() or audio_path.stat().st_size == 0:
+            raise ValueError("The authorized YouTube audio could not be extracted.")
+        score, confidence = await run_in_threadpool(
+            transcribe_audio,
+            audio_path,
+            title or f"YouTube {video_id}",
+            tempo,
+            meter,
+            instrument,
+        )
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(status_code=503, detail=str(error)) from error
+    finally:
+        temporary.cleanup()
+    return {"score": score, "confidence": confidence, "source": {"kind": "youtube", "url": canonical}}
 
 
 if not (ROOT / "index.html").is_file():

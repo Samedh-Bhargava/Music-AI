@@ -188,6 +188,8 @@
     .discovery-search { display: flex; gap: 8px; }
     .discovery-search input { min-width: 0; height: 38px; flex: 1; padding: 0 11px; border: 1px solid #e1e7e0; border-radius: 7px; background: white; font-size: 11px; }
     .discover-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, .75fr); gap: 13px; margin-top: 13px; align-items: start; }
+    .discover-grid > *, .search-results, .search-result { min-width: 0; }
+    .practice-empty-actions { flex-wrap: wrap; }
     .search-results { display: grid; gap: 8px; padding: 12px; }
     .search-result { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px; border: 1px solid #edf0ec; border-radius: 7px; background: #fff; }
     .search-result h3 { margin: 0; font: 700 12px "Manrope", sans-serif; }
@@ -365,13 +367,13 @@
   <dialog id="analysis-dialog">
     <div class="dialog-head"><h2>Analyze with local AI</h2><button class="icon-button" type="button" data-action="close-dialog" aria-label="Close">×</button></div>
     <div class="dialog-body">
-      <p class="dialog-help">Your file is sent to Sonora’s analysis service for processing. Sheet recognition uses Audiveris; audio and video transcription use Basic Pitch, with video audio extracted using FFmpeg. First model use may take a few minutes.</p>
+      <p class="dialog-help">Choose one clear file, confirm the tempo and time signature, then let Sonora prepare an editable score. Results may need small corrections; you can review, edit, transpose, play, and export every detected note.</p>
       <section class="analysis-section">
         <h3>Choose input and settings</h3>
         <label class="file-label"><span id="analysis-file-label">Choose score image or PDF</span><input id="analysis-file" type="file" accept="image/*,.pdf"></label>
         <div class="analysis-settings">
           <label>Input type<select id="analysis-kind"><option value="score">Sheet image / PDF</option><option value="audio">Audio recording</option><option value="video">Video performance</option></select></label>
-          <label>Tempo · BPM<input id="analysis-tempo" type="number" min="30" max="240" value="120"></label>
+          <label>Tempo · BPM<input id="analysis-tempo" type="number" min="1" value="120"></label>
           <label>Time signature<select id="analysis-meter"><option>4/4</option><option>3/4</option><option>2/4</option><option>6/8</option><option>5/4</option><option>7/8</option></select></label>
           <label>Instrument<select id="analysis-instrument"><option>Piano</option><option>Guitar</option><option>Violin</option><option>Flute</option><option>Other</option></select></label>
         </div>
@@ -412,7 +414,6 @@
       const CLOUD_SESSION_KEY = "sonora.cloud-session.v1";
       const SUPABASE_URL = "https://wltervpxulekpwsxrope.supabase.co";
       const SUPABASE_PUBLIC_KEY = "sb_publishable_hweBVG6gVkRyfGc2O2DG8Q_MXl0QGxR";
-      const MAX_SCORE_NOTES = 20000;
       const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
       const NOTE_OPTIONS = [];
       for (let octave = 0; octave <= 8; octave++) {
@@ -471,7 +472,7 @@
           const measure = Number(note.measure || 1);
           const beat = Number(note.beat || 0);
           const duration = Number(note.duration || 1);
-          if (midi === null || !Number.isInteger(measure) || measure < 1 || measure > 256 || !Number.isFinite(beat) || beat < 0 || beat > 32 || !Number.isFinite(duration) || duration <= 0 || duration > 16) {
+          if (midi === null || !Number.isInteger(measure) || measure < 1 || !Number.isFinite(beat) || beat < 0 || !Number.isFinite(duration) || duration <= 0) {
             throw new Error("The score contains an invalid pitch, measure, beat, or duration.");
           }
           return {
@@ -482,15 +483,19 @@
             confidence: note.confidence != null && Number.isFinite(Number(note.confidence)) ? Math.max(0, Math.min(1, Number(note.confidence))) : null
           };
         });
-        if (notes.length > MAX_SCORE_NOTES) throw new Error(`A score can contain at most ${MAX_SCORE_NOTES.toLocaleString()} notes.`);
-        const measureCount = Math.max(1, Number(value.measureCount) || 0, ...notes.map(note => note.measure));
+        const requestedMeasureCount = Number(value.measureCount);
+        const measureCount = Math.max(
+          1,
+          Number.isInteger(requestedMeasureCount) ? requestedMeasureCount : 0,
+          ...notes.map(note => note.measure)
+        );
         return {
           id: uid(), title: String(value.title || "Imported score").slice(0, 100),
           instrument: ["Piano", "Guitar", "Violin", "Flute", "Other"].includes(value.instrument) ? value.instrument : "Piano",
           playbackSound: PLAYBACK_SOUNDS.includes(value.playbackSound) ? value.playbackSound : (["Piano", "Guitar", "Violin", "Flute"].includes(value.instrument) ? value.instrument : "Piano"),
           composer: String(value.composer || "").slice(0, 100),
-          tempo: Math.min(240, Math.max(30, Math.round(Number(value.tempo) || 96))),
-          meter: /^\d{1,2}\/(1|2|4|8|16)$/.test(String(value.meter)) ? value.meter : "4/4",
+          tempo: Math.max(1, Math.round(Number(value.tempo) || 96)),
+          meter: /^\d+\/\d+$/.test(String(value.meter)) ? String(value.meter) : "4/4",
           key: KEY_FIFTHS[String(value.key)] !== undefined ? String(value.key) : "C major",
           measureCount, notes,
           analysis: value.analysis && typeof value.analysis === "object" ? value.analysis : null,
@@ -588,6 +593,7 @@
         return headers;
       }
       async function fetchWithTimeout(url, options, timeoutMs) {
+        if (!timeoutMs) return await fetch(url, options);
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), timeoutMs);
         try {
@@ -668,7 +674,6 @@
           if (!existing || localDate >= remoteDate) byId.set(project.id, project);
         }
         const mergedProjects = [...byId.values()].filter(project => !deleted.has(project.id));
-        if (mergedProjects.length > 100) throw new Error("Your merged cloud and local libraries exceed Sonora’s 100-score limit. Export a backup and remove scores before syncing.");
         state.deletedIds = [...deleted];
         state.projects = mergedProjects;
         const requestedId = state.currentId || remote?.current_id;
@@ -809,7 +814,7 @@
       }
       async function apiRequest(path, options = {}) {
         const headers = new Headers(options.headers || {});
-        const { timeoutMs = 15000, ...requestOptions } = options;
+        const { timeoutMs = 0, ...requestOptions } = options;
         if (state.cloud.session) {
           await ensureCloudSession();
           headers.set("Authorization", `Bearer ${state.cloud.session.access_token}`);
@@ -853,7 +858,6 @@
         const button = document.querySelector('[data-action="run-analysis"]');
         errorNode.textContent = "";
         if (!file) { errorNode.textContent = kind === "score" ? "Choose a score image or PDF first." : kind === "video" ? "Choose a video file first." : "Choose an audio file first."; return; }
-        if (file.size > 25 * 1024 * 1024) { errorNode.textContent = "Files are limited to 25 MB."; return; }
         const extension = file.name.split(".").pop().toLowerCase();
         const scoreExtensions = ["png", "jpg", "jpeg", "tif", "tiff", "bmp", "pdf"];
         const audioExtensions = ["wav", "mp3", "m4a", "flac", "ogg", "aiff", "aif"];
@@ -869,13 +873,15 @@
         if (kind !== "score") form.append("title", file.name.replace(/\.[^.]+$/, ""));
         button.disabled = true;
         button.textContent = kind === "score" ? "Recognizing notation…" : "Transcribing performance…";
+        errorNode.textContent = kind === "score"
+          ? "Reading the page and reconstructing measures. Keep this window open."
+          : "Listening to the full recording and finding notes. This is often the longest step.";
         try {
           const endpoint = kind === "score" ? "/api/analyze/score" : kind === "video" ? "/api/analyze/video" : "/api/analyze/audio";
-          const response = await apiRequest(endpoint, { method: "POST", body: form, timeoutMs: 15 * 60 * 1000 });
+          const response = await apiRequest(endpoint, { method: "POST", body: form });
           const project = normalizeProject(response.score);
           project.analysis = response.confidence || null;
           project.source = response.source || { kind };
-          if (state.projects.length >= 100) throw new Error("This browser library already has 100 scores. Delete one before analyzing another.");
           state.projects.unshift(project);
           state.currentId = project.id;
           state.view = "studio";
@@ -884,7 +890,7 @@
           persist();
           closeDialogs();
           render();
-          showToast(`${project.notes.length} notes recognized. Review the confidence and score checks before relying on the result.`);
+          showToast(`${project.notes.length} notes added across ${project.measureCount} measures. Open the score to review and correct any missed or uncertain notes.`);
           await checkBackend();
         } catch (error) {
           errorNode.textContent = error.message;
@@ -908,7 +914,10 @@
         try {
           const response = await apiRequest(`/api/search?q=${encodeURIComponent(query)}`);
           const results = response.results || [];
-          const entries = results.map(item => `<article class="search-result"><div><h3>${esc(item.title)}</h3><p>${esc(item.artist || item.source)}${item.year ? ` · ${esc(item.year)}` : ""}</p><a href="${esc(item.url)}" target="_blank" rel="noopener noreferrer">Open ${esc(item.source)} ↗</a></div><span class="source-tag">${esc(item.kind || item.source)}</span></article>`).join("");
+          const entries = results.map(item => {
+            const kind = item.kind === "audio" ? "audio" : "score";
+            return `<article class="search-result"><div><h3>${esc(item.title)}</h3><p>${esc(item.artist || item.source)}${item.year ? ` · ${esc(item.year)}` : ""}</p><a href="${esc(item.url)}" target="_blank" rel="noopener noreferrer">Open ${esc(item.source)} ↗</a><div class="practice-empty-actions"><button class="button" type="button" data-action="open-result-analysis" data-result-kind="${kind}">Analyze a downloaded copy</button></div></div><span class="source-tag">${esc(item.kind || item.source)}</span></article>`;
+          }).join("");
           const warnings = (response.warnings || []).map(warning => `<div class="notice-item">${esc(warning)}</div>`).join("");
           resultNode.innerHTML = `${warnings}${entries || `<div class="result-empty">No matches found. Try a shorter title or composer name.</div>`}<p class="dialog-help">Catalog results link to their original source. Check each item's rights and availability before use.</p>`;
         } catch (error) {
@@ -932,12 +941,73 @@
         resultNode.innerHTML = `<div class="result-empty">Looking up video details…</div>`;
         try {
           const response = await apiRequest(`/api/youtube?url=${encodeURIComponent(value)}`);
-          resultNode.innerHTML = `<iframe title="${esc(response.title)}" src="${esc(response.embedUrl)}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe><h3>${esc(response.title)}</h3><p>${esc(response.author || "")}</p><p>${esc(response.analysisNote)} For a video you own, download it through <a href="https://studio.youtube.com/" target="_blank" rel="noopener noreferrer">YouTube Studio</a>, then upload the authorized video file here. For another creator’s video, ask them for an authorized copy.</p><div class="practice-empty-actions"><button class="button" type="button" data-action="open-video-analysis">Upload video file</button><button class="button" type="button" data-action="open-audio-analysis">Upload audio file</button><a class="button" href="${esc(response.url)}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a></div>`;
+          resultNode.innerHTML = `<iframe title="${esc(response.title)}" src="${esc(response.embedUrl)}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe><h3>${esc(response.title)}</h3><p>${esc(response.author || "")}</p><p>${esc(response.analysisNote)}</p><label class="practice-loop" style="display:flex;align-items:center;gap:8px"><input id="youtube-authorized" type="checkbox"> I own or am authorized to use this video</label><div class="practice-empty-actions"><button class="button" type="button" data-action="youtube-download" data-url="${esc(response.url)}">Download MP4</button><button class="button primary" type="button" data-action="youtube-analyze" data-url="${esc(response.url)}">Analyze & create score</button><a class="button" href="${esc(response.url)}" target="_blank" rel="noopener noreferrer">Open on YouTube ↗</a></div><p class="dialog-help">Only download or analyze media you own or are legally authorized to use. Sonora does not bypass restrictions or support paid/copyright-protected downloads.</p>`;
         } catch (error) {
           resultNode.innerHTML = `<div class="notice-item error">${esc(error.message)}</div>`;
         } finally {
           button.disabled = false;
           button.textContent = "Preview link";
+        }
+      }
+      async function downloadYouTube(url) {
+        const authorized = $("#youtube-authorized")?.checked;
+        if (!authorized) { showToast("Confirm that you own or are authorized to use this YouTube video."); return; }
+        showToast("Preparing the authorized YouTube download…");
+        try {
+          const form = new FormData();
+          form.append("url", url);
+          form.append("authorized", "true");
+          const headers = new Headers();
+          if (state.cloud.session) {
+            await ensureCloudSession();
+            headers.set("Authorization", `Bearer ${state.cloud.session.access_token}`);
+          }
+          const response = await fetchWithTimeout(`${apiBase()}/api/youtube/download`, { method: "POST", body: form, headers }, 0);
+          if (!response.ok) {
+            let message = `HTTP ${response.status}`;
+            try { message = (await response.json()).detail || message; } catch (_) {}
+            throw new Error(message);
+          }
+          const blob = await response.blob();
+          if (!blob.size) throw new Error("The YouTube download returned an empty file.");
+          const objectUrl = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = objectUrl;
+          link.download = "sonora-youtube-video.mp4";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(objectUrl), 10000);
+          showToast("Authorized YouTube download is ready.");
+        } catch (error) {
+          showToast(`YouTube download failed: ${error.message}`);
+        }
+      }
+      async function analyzeYouTube(url) {
+        const authorized = $("#youtube-authorized")?.checked;
+        if (!authorized) { showToast("Confirm that you own or are authorized to analyze this YouTube video."); return; }
+        try {
+          showToast("Downloading and transcribing the authorized YouTube video…");
+          const form = new FormData();
+          form.append("url", url);
+          form.append("authorized", "true");
+          form.append("tempo", $("#analysis-tempo")?.value || "120");
+          form.append("meter", $("#analysis-meter")?.value || "4/4");
+          form.append("instrument", $("#analysis-instrument")?.value || "Piano");
+          const response = await apiRequest("/api/youtube/transcribe", { method: "POST", body: form });
+          const project = normalizeProject(response.score);
+          project.analysis = response.confidence || null;
+          project.source = response.source || { kind: "youtube", url };
+          state.projects.unshift(project);
+          state.currentId = project.id;
+          state.view = "studio";
+          state.undo = [];
+          state.redo = [];
+          persist();
+          render();
+          showToast(`${project.notes.length} notes transcribed across ${project.measureCount} measures. Review the tempo, timing, and missed passages before exporting.`);
+        } catch (error) {
+          showToast(`YouTube transcription failed: ${error.message}`);
         }
       }
       function showToast(message) {
@@ -1153,12 +1223,12 @@
               if (beats && beatType) meter = `${beats}/${beatType}`;
             } else if (element.localName === "direction") {
               const perMinute = Number(element.querySelector("per-minute")?.textContent || element.querySelector("sound")?.getAttribute("tempo"));
-              if (perMinute >= 30 && perMinute <= 240) tempo = Math.round(perMinute);
+              if (perMinute >= 1) tempo = Math.round(perMinute);
               const marking = element.querySelector("dynamics > *")?.localName;
               if (DYNAMICS.includes(marking)) dynamic = marking;
             } else if (element.localName === "sound") {
               const foundTempo = Number(element.getAttribute("tempo"));
-              if (foundTempo >= 30 && foundTempo <= 240) tempo = Math.round(foundTempo);
+              if (foundTempo >= 1) tempo = Math.round(foundTempo);
             } else if (element.localName === "backup" || element.localName === "forward") {
               const amount = Number(element.querySelector("duration")?.textContent || 0) / divisions;
               cursor += element.localName === "backup" ? -amount : amount;
@@ -1204,7 +1274,6 @@
             } else {
               throw new Error("Use an uncompressed MusicXML (.musicxml or .xml) file, or a Sonora JSON backup.");
             }
-            if (state.projects.length >= 100) throw new Error("This browser library already has 100 scores. Delete one before importing another.");
             state.projects.unshift(project);
             state.currentId = project.id;
             state.view = "studio";
@@ -1230,10 +1299,9 @@
           if (!match) throw new Error(`Could not read “${token}”. Use note names such as C4 or F#3:0.5.`);
           const pitch = `${match[1].toUpperCase()}${match[2] === "♭" ? "b" : match[2]}${match[3]}`;
           const duration = match[4] == null ? 1 : Number(match[4]);
-          if (noteMidi(pitch) === null || !Number.isFinite(duration) || duration <= 0 || duration > 16) throw new Error(`“${token}” has an invalid pitch or duration.`);
+          if (noteMidi(pitch) === null || !Number.isFinite(duration) || duration <= 0) throw new Error(`“${token}” has an invalid pitch or duration.`);
           return { pitch, duration };
         });
-        if (project.notes.length + parsed.length > MAX_SCORE_NOTES) throw new Error(`A score can contain at most ${MAX_SCORE_NOTES.toLocaleString()} notes.`);
         snapshot();
         let measure = project.notes.reduce((max, note) => Math.max(max, note.measure), 1);
         let beat = 0;
@@ -1344,7 +1412,7 @@
       function renderNotesTable(project) {
         const notes = sortedNotes(project);
         if (!notes.length) return `<div class="empty-notes">This score has no notes yet.<br>Use <b>Add note</b>, paste a sequence, or import MusicXML.</div>`;
-        const rows = notes.map((note, index) => `<tr data-note-row="${esc(note.id)}"><td><span class="row-number">${index + 1}</span></td><td><input aria-label="Pitch, note ${index + 1}" type="text" list="pitch-list" data-note-field="pitch" data-note-id="${esc(note.id)}" value="${esc(note.pitch)}"></td><td><input aria-label="Measure, note ${index + 1}" type="number" min="1" max="256" step="1" data-note-field="measure" data-note-id="${esc(note.id)}" value="${note.measure}"></td><td><input aria-label="Beat, note ${index + 1}" type="number" min="1" max="32" step="0.25" data-note-field="beat" data-note-id="${esc(note.id)}" value="${Number(note.beat) + 1}"></td><td><select aria-label="Duration, note ${index + 1}" data-note-field="duration" data-note-id="${esc(note.id)}">${durationOptions(note.duration)}</select></td><td><select aria-label="Hand, note ${index + 1}" data-note-field="hand" data-note-id="${esc(note.id)}"><option value="R" ${note.hand === "R" ? "selected" : ""}>RH</option><option value="L" ${note.hand === "L" ? "selected" : ""}>LH</option></select></td><td><input aria-label="Fingering, note ${index + 1}" title="Suggested fingering (1–5)" type="number" min="1" max="5" step="1" data-note-field="finger" data-note-id="${esc(note.id)}" value="${esc(note.finger)}" placeholder="–"></td><td><select aria-label="Dynamic, note ${index + 1}" data-note-field="dynamic" data-note-id="${esc(note.id)}">${DYNAMICS.map(dynamic => `<option value="${dynamic}" ${note.dynamic === dynamic ? "selected" : ""}>${dynamic}</option>`).join("")}</select></td><td><span class="row-number" title="${note.confidence == null ? "No model activation score" : "Uncalibrated model activation estimate"}">${note.confidence == null ? "—" : `${Math.round(note.confidence * 100)}%`}</span></td><td><button class="delete-row" type="button" data-action="delete-note" data-note-id="${esc(note.id)}" aria-label="Delete ${esc(note.pitch)}">×</button></td></tr>`).join("");
+        const rows = notes.map((note, index) => `<tr data-note-row="${esc(note.id)}"><td><span class="row-number">${index + 1}</span></td><td><input aria-label="Pitch, note ${index + 1}" type="text" list="pitch-list" data-note-field="pitch" data-note-id="${esc(note.id)}" value="${esc(note.pitch)}"></td><td><input aria-label="Measure, note ${index + 1}" type="number" min="1" step="1" data-note-field="measure" data-note-id="${esc(note.id)}" value="${note.measure}"></td><td><input aria-label="Beat, note ${index + 1}" type="number" min="1" step="0.25" data-note-field="beat" data-note-id="${esc(note.id)}" value="${Number(note.beat) + 1}"></td><td><input aria-label="Duration, note ${index + 1}" type="number" min="0.0625" step="0.0625" data-note-field="duration" data-note-id="${esc(note.id)}" value="${esc(note.duration)}"></td><td><select aria-label="Hand, note ${index + 1}" data-note-field="hand" data-note-id="${esc(note.id)}"><option value="R" ${note.hand === "R" ? "selected" : ""}>RH</option><option value="L" ${note.hand === "L" ? "selected" : ""}>LH</option></select></td><td><input aria-label="Fingering, note ${index + 1}" title="Suggested fingering (1–5)" type="number" min="1" max="5" step="1" data-note-field="finger" data-note-id="${esc(note.id)}" value="${esc(note.finger)}" placeholder="–"></td><td><select aria-label="Dynamic, note ${index + 1}" data-note-field="dynamic" data-note-id="${esc(note.id)}">${DYNAMICS.map(dynamic => `<option value="${dynamic}" ${note.dynamic === dynamic ? "selected" : ""}>${dynamic}</option>`).join("")}</select></td><td><span class="row-number" title="${note.confidence == null ? "No model activation score" : "Uncalibrated model activation estimate"}">${note.confidence == null ? "—" : `${Math.round(note.confidence * 100)}%`}</span></td><td><button class="delete-row" type="button" data-action="delete-note" data-note-id="${esc(note.id)}" aria-label="Delete ${esc(note.pitch)}">×</button></td></tr>`).join("");
         return `<datalist id="pitch-list">${NOTE_OPTIONS.map(pitch => `<option value="${pitch}">`).join("")}</datalist><div class="notes-scroll"><table class="notes-table"><thead><tr><th style="width:28px">#</th><th style="width:59px">Pitch</th><th style="width:48px">Bar</th><th style="width:47px">Beat</th><th style="width:72px">Length</th><th style="width:43px">Hand</th><th style="width:45px">Finger</th><th style="width:48px">Dyn.</th><th style="width:42px">AI</th><th style="width:32px"></th></tr></thead><tbody>${rows}</tbody></table></div>`;
       }
       function commonHead(title, description, actions = "") {
@@ -1356,8 +1424,8 @@
         const issues = analyses(project);
         const chords = chordNames(project);
         const lastDate = project.updatedAt ? new Date(project.updatedAt).toLocaleDateString() : "This device";
-        const settingBar = `<section class="card toolbar-card" aria-label="Score settings"><div class="project-title-wrap"><label class="field-label" for="project-title">Score title</label><input id="project-title" class="title-input" type="text" maxlength="100" data-project-field="title" value="${esc(project.title)}"></div><div class="settings"><label class="setting wide"><span class="field-label">Composer</span><input type="text" maxlength="100" placeholder="Optional" data-project-field="composer" value="${esc(project.composer)}"></label><label class="setting wide"><span class="field-label">Instrument</span><select data-project-field="instrument">${["Piano", "Guitar", "Violin", "Flute", "Other"].map(instrument => `<option ${project.instrument === instrument ? "selected" : ""}>${instrument}</option>`).join("")}</select></label><label class="setting"><span class="field-label">Tempo · BPM</span><input type="number" min="30" max="240" data-project-field="tempo" value="${project.tempo}"></label><label class="setting"><span class="field-label">Time</span><select data-project-field="meter">${["2/4", "3/4", "4/4", "5/4", "6/8", "7/8", "9/8", "12/8"].map(meter => `<option ${project.meter === meter ? "selected" : ""}>${meter}</option>`).join("")}</select></label><label class="setting wide"><span class="field-label">Key</span><select data-project-field="key">${keyOptions(project.key)}</select></label></div></section>`;
-        const measures = Array.from({ length: Math.min(maxMeasure, 256) }, (_, index) => renderMeasure(project, index + 1)).join("");
+        const settingBar = `<section class="card toolbar-card" aria-label="Score settings"><div class="project-title-wrap"><label class="field-label" for="project-title">Score title</label><input id="project-title" class="title-input" type="text" maxlength="100" data-project-field="title" value="${esc(project.title)}"></div><div class="settings"><label class="setting wide"><span class="field-label">Composer</span><input type="text" maxlength="100" placeholder="Optional" data-project-field="composer" value="${esc(project.composer)}"></label><label class="setting wide"><span class="field-label">Instrument</span><select data-project-field="instrument">${["Piano", "Guitar", "Violin", "Flute", "Other"].map(instrument => `<option ${project.instrument === instrument ? "selected" : ""}>${instrument}</option>`).join("")}</select></label><label class="setting"><span class="field-label">Tempo · BPM</span><input type="number" min="1" data-project-field="tempo" value="${project.tempo}"></label><label class="setting"><span class="field-label">Measures</span><input type="number" min="1" step="1" data-project-field="measureCount" value="${maxMeasure}"></label><label class="setting"><span class="field-label">Time</span><input type="text" maxlength="16" placeholder="4/4" data-project-field="meter" value="${esc(project.meter)}"></label><label class="setting wide"><span class="field-label">Key</span><select data-project-field="key">${keyOptions(project.key)}</select></label></div></section>`;
+        const measures = Array.from({ length: maxMeasure }, (_, index) => renderMeasure(project, index + 1)).join("");
         const issueHtml = issues.length ? issues.map(issue => `<div class="notice-item ${issue.kind === "error" ? "error" : ""}"><span class="notice-mark">${issue.kind === "error" ? "!" : "•"}</span><span>${esc(issue.text)}</span></div>`).join("") : `<div class="notice-empty">No meter or instrument-range flags. This rule check is advisory, not a substitute for music-theory review.</div>`;
         const chordHtml = chords.map(item => `<span class="chord-chip"><b>m.${item.measure}</b>&nbsp; ${esc(item.chord)}</span>`).join("");
         const noteCount = project.notes.length;
@@ -1394,12 +1462,12 @@
         const notes = sortedNotes(project).filter(note => note.measure >= startMeasure && note.measure <= endMeasure && (hand === "both" || note.hand === hand));
         const rows = notes.map(note => `<button class="practice-note" type="button" data-action="preview-note" data-note-id="${esc(note.id)}" data-practice-note="${esc(note.id)}" aria-label="Hear ${esc(note.pitch)}, measure ${note.measure}, beat ${note.beat + 1}"><span>m. ${note.measure}</span><b>${esc(note.pitch)}</b><span>Beat ${note.beat + 1} · ${note.duration} beat${note.duration === 1 ? "" : "s"}</span><small>${note.dynamic || "mf"}${note.hand === "L" ? " · LH" : " · RH"}</small></button>`).join("");
         const speed = [0.5, 0.75, 1].includes(Number(state.practiceSpeed)) ? Number(state.practiceSpeed) : 1;
-        return `${commonHead("Practice room", `${esc(project.title)} · ${esc(project.instrument)} · ${project.tempo} BPM`, `<button class="button primary" type="button" data-action="${state.playing ? "stop" : "play"}">${state.playing ? "■ Stop" : "▶ Play section"}</button>`)}<div class="practice-layout"><section class="card"><div class="card-head"><div><h2>Practice section</h2><p>Choose a passage and tap any note to hear it.</p></div><span class="note-count">${notes.length} note${notes.length === 1 ? "" : "s"}</span></div><div class="practice-progress" role="progressbar" aria-label="Practice playback progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="practice-progress"></span></div><div class="practice-controls"><label>From measure<input id="practice-start" type="number" min="1" max="${maxMeasure}" value="${startMeasure}"></label><label>To measure<input id="practice-end" type="number" min="1" max="${maxMeasure}" value="${endMeasure}"></label><label>Hands<select id="practice-hand"><option value="both" ${hand === "both" ? "selected" : ""}>Both hands</option><option value="R" ${hand === "R" ? "selected" : ""}>Right hand</option><option value="L" ${hand === "L" ? "selected" : ""}>Left hand</option></select></label><label>Practice speed<select id="practice-speed"><option value="0.5" ${speed === 0.5 ? "selected" : ""}>Slow · 0.5×</option><option value="0.75" ${speed === 0.75 ? "selected" : ""}>Steady · 0.75×</option><option value="1" ${speed === 1 ? "selected" : ""}>Score tempo · 1×</option></select></label><label class="practice-loop"><input id="practice-loop" type="checkbox" ${state.practiceLoop ? "checked" : ""}> Repeat this section</label></div><div class="practice-notes">${rows || `<div class="empty-notes">${project.notes.length ? "No notes in this section for the selected hand. Try Both hands or another measure range." : "Add notes in Studio to start practicing."}</div>`}</div></section><aside class="card practice-tip"><h2>Make it your practice</h2><p>Start slowly with one hand, then widen the measure range and try both hands. Turn on repeat to loop the selected passage. Tap a note in the list to hear that pitch on its own.</p><p style="margin-top:10px">Playback uses a synthesized ${esc(project.playbackSound)}-style tone, not a sampled instrument recording.</p><div class="practice-empty-actions"><button class="button" type="button" data-action="open-studio">Edit this score</button></div></aside></div>`;
+        return `${commonHead("Practice room", `${esc(project.title)} · ${esc(project.instrument)} · ${project.tempo} BPM`, `<button class="button primary" type="button" data-action="${state.playing ? "stop" : "play"}">${state.playing ? "■ Stop" : "▶ Play section"}</button>`)}<div class="practice-layout"><section class="card"><div class="card-head"><div><h2>Practice section</h2><p>Choose a passage and tap any note to hear it.</p></div><span class="note-count">${notes.length} note${notes.length === 1 ? "" : "s"}</span></div><div class="practice-progress" role="progressbar" aria-label="Practice playback progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="practice-progress"></span></div><div class="practice-controls"><label>From measure<input id="practice-start" type="number" min="1" value="${startMeasure}"></label><label>To measure<input id="practice-end" type="number" min="1" value="${endMeasure}"></label><label>Hands<select id="practice-hand"><option value="both" ${hand === "both" ? "selected" : ""}>Both hands</option><option value="R" ${hand === "R" ? "selected" : ""}>Right hand</option><option value="L" ${hand === "L" ? "selected" : ""}>Left hand</option></select></label><label>Practice speed<select id="practice-speed"><option value="0.5" ${speed === 0.5 ? "selected" : ""}>Slow · 0.5×</option><option value="0.75" ${speed === 0.75 ? "selected" : ""}>Steady · 0.75×</option><option value="1" ${speed === 1 ? "selected" : ""}>Score tempo · 1×</option></select></label><label class="practice-loop"><input id="practice-loop" type="checkbox" ${state.practiceLoop ? "checked" : ""}> Repeat this section</label></div><div class="practice-notes">${rows || `<div class="empty-notes">${project.notes.length ? "No notes in this section for the selected hand. Try Both hands or another measure range." : "Add notes in Studio to start practicing."}</div>`}</div></section><aside class="card practice-tip"><h2>Make it your practice</h2><p>Start slowly with one hand, then widen the measure range and try both hands. Turn on repeat to loop the selected passage. Tap a note in the list to hear that pitch on its own.</p><p style="margin-top:10px">Playback uses a synthesized ${esc(project.playbackSound)}-style tone, not a sampled instrument recording.</p><div class="practice-empty-actions"><button class="button" type="button" data-action="open-studio">Edit this score</button></div></aside></div>`;
       }
       function renderDiscover() {
         return `${commonHead("Discover music", "Find music, preview performances, or create a score from audio or video.")}
-          <section class="card"><div class="card-head"><div><h2>Find scores and recordings</h2><p>Search catalog metadata from MusicBrainz and the Internet Archive.</p></div></div><form class="discovery-search" id="catalog-form" style="padding:12px"><input id="catalog-query" type="search" minlength="2" maxlength="120" placeholder="Try “Für Elise” or “Debussy Clair de Lune”" aria-label="Search music catalogs" required><button class="button primary" type="submit" data-action="search-catalog">Search catalogs</button></form><div class="search-results" id="catalog-results"><div class="result-empty">Search results link to the original source; this app does not download copyrighted scores.</div></div></section>
-          <div class="discover-grid"><section class="card"><div class="card-head"><div><h2>Create a score from audio or video</h2><p>Upload a recording or video performance to detect notes and make an editable score.</p></div></div><div class="practice-tip"><p>For the clearest results, use a short recording with one prominent instrument. Videos must include an audio track and be under 10 minutes.</p><p style="margin-top:8px">For a YouTube video you own, download the file through <a href="https://studio.youtube.com/" target="_blank" rel="noopener noreferrer">YouTube Studio</a> and choose it here. For someone else’s video, ask the creator for an authorized copy; Sonora does not download audio from YouTube links.</p><p style="margin-top:8px">Unsupported, unreadable, or non-musical inputs are rejected when no score or notes can be recognized. This is not a classifier of prank intent.</p><div class="practice-empty-actions"><button class="button primary" type="button" data-action="open-audio-analysis">Choose audio file</button><button class="button" type="button" data-action="open-video-analysis">Choose video file</button></div></div></section><section class="card"><div class="card-head"><div><h2>Preview a YouTube link</h2><p>Preview performances here; direct YouTube audio extraction is not available.</p></div></div><form class="discovery-search" id="youtube-form" style="padding:12px"><input id="youtube-url" type="url" placeholder="https://www.youtube.com/watch?v=…" aria-label="YouTube video URL" required><button class="button" type="submit" data-action="youtube-lookup">Preview link</button></form><div class="youtube-preview" id="youtube-result"><div class="result-empty">Paste a video link to load its title, channel, and embedded player. YouTube’s official embed provides playback and metadata, not an audio file for transcription. If you have an authorized copy, upload the audio or video file.</div></div></section></div>`;
+          <section class="card"><div class="card-head"><div><h2>Find scores and recordings</h2><p>Search catalog metadata from MusicBrainz and the Internet Archive. Only use results when their rights allow downloading.</p></div></div><form class="discovery-search" id="catalog-form" style="padding:12px"><input id="catalog-query" type="search" minlength="2" maxlength="120" placeholder="Try “Für Elise” or “Debussy Clair de Lune”" aria-label="Search music catalogs" required><button class="button primary" type="submit" data-action="search-catalog">Search catalogs</button></form><div class="search-results" id="catalog-results"><div class="result-empty">Search public catalogs, then open the original item to verify its rights and download a copy. Sonora does not bypass paywalls or paid-sheet restrictions.</div><div class="practice-empty-actions"><a class="button" href="https://imslp.org/" target="_blank" rel="noopener noreferrer">IMSLP public domain</a><a class="button" href="https://musopen.org/music/" target="_blank" rel="noopener noreferrer">Musopen free music</a><a class="button" href="https://www.mutopiaproject.org/" target="_blank" rel="noopener noreferrer">Mutopia public domain</a></div></div></section>
+          <div class="discover-grid"><section class="card"><div class="card-head"><div><h2>Create a score from audio or video</h2><p>Upload a recording or video performance to detect notes and make an editable score.</p></div></div><div class="practice-tip"><p>For the clearest results, use a recording with one prominent instrument. Sonora does not apply an application-defined duration or file-size cutoff.</p><p style="margin-top:8px">YouTube links can be downloaded or analyzed only after you confirm that you own or are authorized to use the video. Sonora does not bypass restrictions or paid/copyright-protected downloads.</p><p style="margin-top:8px">Unsupported, unreadable, or non-musical inputs are rejected when no score or notes can be recognized.</p><div class="practice-empty-actions"><button class="button primary" type="button" data-action="open-audio-analysis">Choose audio file</button><button class="button" type="button" data-action="open-video-analysis">Choose video file</button></div></div></section><section class="card"><div class="card-head"><div><h2>Preview and analyze a YouTube link</h2><p>Authorized videos can be downloaded or transcribed directly.</p></div></div><form class="discovery-search" id="youtube-form" style="padding:12px"><input id="youtube-url" type="url" placeholder="https://www.youtube.com/watch?v=…" aria-label="YouTube video URL" required><button class="button" type="submit" data-action="youtube-lookup">Preview link</button></form><div class="youtube-preview" id="youtube-result"><div class="result-empty">Paste a YouTube video link, confirm that you own or are authorized to use it, then download or create a score from it.</div></div></section></div>`;
       }
       function render() {
         $("#breadcrumb").textContent = state.view === "library" ? "My scores" : state.view === "practice" ? "Practice" : state.view === "discover" ? "Discover" : "Studio";
@@ -1423,7 +1491,6 @@
       function addNote(chord = false) {
         const project = current();
         if (!project) { showToast("Create a score first."); return; }
-        if (project.notes.length >= MAX_SCORE_NOTES) { showToast(`A score can contain at most ${MAX_SCORE_NOTES.toLocaleString()} notes.`); return; }
         snapshot();
         const notes = sortedNotes(project);
         const last = notes.at(-1);
@@ -1447,7 +1514,6 @@
       function addMeasure() {
         const project = current();
         if (!project) return;
-        if (project.measureCount >= 256) { showToast("Scores are limited to 256 measures in the notation view."); return; }
         snapshot();
         project.measureCount = Math.max(project.measureCount, ...project.notes.map(note => note.measure), 0) + 1;
         persist();
@@ -1460,13 +1526,13 @@
         let value = rawValue;
         if (field === "measure") {
           value = Number(rawValue);
-          if (!Number.isInteger(value) || value < 1 || value > 999) throw new Error("Measure must be a whole number between 1 and 999.");
+          if (!Number.isInteger(value) || value < 1) throw new Error("Measure must be a positive whole number.");
         } else if (field === "beat") {
           value = Number(rawValue) - 1;
-          if (!Number.isFinite(value) || value < 0 || value > 32) throw new Error("Beat must be between 1 and 33.");
+          if (!Number.isFinite(value) || value < 0) throw new Error("Beat must be 1 or greater.");
         } else if (field === "duration") {
           value = Number(rawValue);
-          if (!DURATIONS.some(([duration]) => Number(duration) === value)) throw new Error("Choose a supported note duration.");
+          if (!Number.isFinite(value) || value <= 0) throw new Error("Duration must be greater than zero.");
         } else if (field === "pitch" && noteMidi(rawValue) === null) {
           throw new Error("Enter a note such as C4, F#3, or Bb5.");
         } else if (field === "finger" && rawValue !== "") {
@@ -1502,11 +1568,15 @@
         if (field === "composer") value = value.trim().slice(0, 100);
         if (field === "tempo") {
           value = Number(value);
-          if (!Number.isInteger(value) || value < 30 || value > 240) throw new Error("Tempo must be a whole number between 30 and 240 BPM.");
+          if (!Number.isInteger(value) || value < 1) throw new Error("Tempo must be a positive whole number.");
         }
         if (field === "instrument" && !RANGES[value]) throw new Error("Choose a supported instrument.");
         if (field === "key" && KEY_FIFTHS[value] === undefined) throw new Error("Choose a supported key.");
-        if (field === "meter" && !/^\d{1,2}\/(1|2|4|8|16)$/.test(value)) throw new Error("Choose a supported time signature.");
+        if (field === "meter" && !/^\d+\/\d+$/.test(value)) throw new Error("Enter a time signature such as 4/4 or 7/8.");
+        if (field === "measureCount") {
+          value = Number(value);
+          if (!Number.isInteger(value) || value < 1) throw new Error("Measure count must be a positive whole number.");
+        }
         snapshot();
         project[field] = value;
         if (field === "meter") project.measureCount = Math.max(project.measureCount, ...project.notes.map(note => note.measure), 1);
@@ -1514,7 +1584,6 @@
         render();
       }
       function createProject(title, instrument) {
-        if (state.projects.length >= 100) throw new Error("This browser library is limited to 100 scores. Delete one before creating another.");
         const project = normalizeProject({ title, instrument, tempo: 96, meter: "4/4", key: "C major", measureCount: 1, notes: [] });
         state.projects.unshift(project);
         state.currentId = project.id;
@@ -1729,6 +1798,12 @@
             }
             openDialog("analysis-dialog");
             checkBackend();
+          } else if (name === "open-result-analysis") {
+            $("#analysis-error").textContent = "";
+            $("#analysis-kind").value = action.dataset.resultKind === "audio" ? "audio" : "score";
+            $("#analysis-kind").dispatchEvent(new Event("change", { bubbles: true }));
+            openDialog("analysis-dialog");
+            checkBackend();
           }
           else if (name === "toggle-note-names") { state.noteNamesVisible = !state.noteNamesVisible; persist(); render(); }
           else if (name === "run-analysis") runAnalysis();
@@ -1752,6 +1827,8 @@
           else if (name === "transpose-down") transpose(-1);
           else if (name === "play") playPlayback();
           else if (name === "stop") stopPlayback();
+          else if (name === "youtube-download") downloadYouTube(action.dataset.url);
+          else if (name === "youtube-analyze") analyzeYouTube(action.dataset.url);
           else if (name === "preview-note") previewPracticeNote(action.dataset.noteId);
           else if (name === "open-studio") setView("studio");
           else if (name === "import-sequence") {

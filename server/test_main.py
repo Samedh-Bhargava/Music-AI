@@ -90,6 +90,27 @@ class MusicXmlTests(unittest.TestCase):
 
         self.assertEqual(len(score["notes"]), 5003)
 
+    def test_preserves_exported_empty_trailing_measures(self):
+        xml = MUSICXML.replace(
+            b"</measure>",
+            b"</measure><measure number=\"30\"><rest/><duration>960</duration></measure>",
+            1,
+        )
+
+        score = parse_musicxml(xml, "fallback")
+
+        self.assertEqual(score["measureCount"], 30)
+
+    def test_preserves_custom_time_signatures(self):
+        xml = MUSICXML.replace(
+            b"<beats>3</beats><beat-type>4</beat-type>",
+            b"<beats>17</beats><beat-type>16</beat-type>",
+        )
+
+        score = parse_musicxml(xml, "fallback")
+
+        self.assertEqual(score["meter"], "17/16")
+
 
 class AudiverisTests(unittest.TestCase):
     def test_runs_full_transcription_and_parses_export(self):
@@ -221,6 +242,28 @@ class VideoApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 429)
         self.assertIn("another", response.json()["detail"].lower())
+
+
+class YouTubeAuthorizationTests(unittest.TestCase):
+    def test_youtube_download_requires_authorization_confirmation(self):
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/youtube/download",
+                data={"url": "https://www.youtube.com/watch?v=dQw4w9WgXc", "authorized": "false"},
+            )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("authorized", response.json()["detail"].lower())
+
+    def test_youtube_transcription_requires_authorization_confirmation(self):
+        with TestClient(app) as client:
+            response = client.post(
+                "/api/youtube/transcribe",
+                data={"url": "https://www.youtube.com/watch?v=dQw4w9WgXc", "authorized": "false"},
+            )
+
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("authorized", response.json()["detail"].lower())
 
 
 class ApiAuthenticationTests(unittest.TestCase):

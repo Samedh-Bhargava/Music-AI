@@ -25,17 +25,18 @@ Open `index.html` directly if you only need the score editor. The analysis serve
 - Playback follows notes across the entire score, including measures with no notes at the end.
 - Enter notes or import/export MusicXML and Sonora JSON.
 - Import score photographs or PDFs. The server calls the Audiveris OMR command-line application and imports its MusicXML output.
-- Transcribe WAV, MP3, M4A, FLAC, OGG, and AIFF audio files with Spotify Basic Pitch. For best results, use a recording of one prominent instrument, under 10 minutes and 25 MB.
-- Scores support up to 20,000 notes per project; oversized transcriptions now return an error rather than silently dropping the rest.
+- Transcribe WAV, MP3, M4A, FLAC, OGG, and AIFF audio files with Spotify Basic Pitch using stricter onset/frame and note-length settings. There is no application-defined duration or file-size cutoff; available server storage, memory, and host limits remain the practical boundary.
+- The Studio has no application-defined note or measure cap. The **Measures** field supports free-handed completion of incomplete recognition results or scores with skipped/resting passages.
 - Heavy score/audio/video analysis runs one job at a time to limit memory pressure. If another job is active, Sonora returns a clear “try again shortly” message instead of queuing more work.
 - Cloud requests have a 15-second timeout and analysis requests have a 15-minute browser timeout. If an individual saved score is damaged, it is skipped without preventing the other scores from loading.
-- Transcribe user-provided MP4, MOV, M4V, MKV, WebM, and AVI performance videos by extracting their audio locally with FFmpeg. Videos must have an audio track and be under 10 minutes and 25 MB.
+- Transcribe user-provided MP4, MOV, M4V, MKV, WebM, and AVI performance videos by extracting their audio locally with FFmpeg. There is no application-defined duration or file-size cutoff.
 - Estimate measure timing using the tempo and meter selected in the Analyze dialog; notes are quantized to quarter-beat subdivisions.
 - Search recording and public archive catalogs through MusicBrainz and the Internet Archive.
-- Preview a YouTube video using its official embed and metadata endpoint. For a video you own, use [YouTube Studio](https://studio.youtube.com/) to download your copy, then upload it through **Discover → Choose video file**. For another creator's video, ask for an authorized copy. YouTube's public embed/oEmbed flow does not provide an audio file, so Sonora does not extract audio directly from YouTube links.
+- Preview a YouTube video using its official embed and metadata endpoint.
+- Authorized YouTube links can also be downloaded or transcribed directly by **Discover**. The app requires an explicit owner/authorization confirmation and does not bypass restrictions or paid/copyright-protected content.
 - Start an audio/video-to-score transcription from **Discover**. Choose a file you have the right to use. The server rejects mislabeled score files, unreadable score pages, videos without audio, and recordings with no detected notes. This is format and transcription validation, not an intent detector for prank/troll uploads.
 
-MusicBrainz and Internet Archive searches require an internet connection. Catalog results point to their original sources; check rights and availability there. YouTube preview does not download or transcribe YouTube audio. For your own videos, download a copy through YouTube Studio; otherwise, obtain an authorized file from the creator. Then use Discover to upload the audio or video file. Video processing uses FFmpeg, included in the Docker image.
+MusicBrainz and Internet Archive searches require an internet connection. Catalog results point to their original sources; check rights and availability there. Authorized YouTube downloads/transcriptions require the explicit confirmation shown in Discover. Sonora does not bypass paywalls or restrictions. Video processing uses FFmpeg and yt-dlp, included in the Docker image.
 
 ## Accounts and cloud sync
 
