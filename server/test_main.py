@@ -111,6 +111,22 @@ class MusicXmlTests(unittest.TestCase):
 
         self.assertEqual(score["meter"], "17/16")
 
+    def test_reads_notes_and_late_measures_from_every_instrument_part(self):
+        xml = MUSICXML.replace(
+            b"</part>",
+            b"<measure number=\"13\"><attributes><divisions>960</divisions></attributes>"
+            b"<note><pitch><step>G</step><octave>5</octave></pitch><duration>480</duration></note></measure></part>"
+            b"<part id=\"P2\"><measure number=\"14\"><attributes><divisions>240</divisions></attributes>"
+            b"<note><pitch><step>A</step><octave>4</octave></pitch><duration>120</duration></note></measure></part>",
+            1,
+        )
+
+        score = parse_musicxml(xml, "fallback")
+
+        self.assertEqual(score["measureCount"], 14)
+        self.assertIn(("G5", 13, 0.5), [(note["pitch"], note["measure"], note["duration"]) for note in score["notes"]])
+        self.assertIn(("A4", 14, 0.5), [(note["pitch"], note["measure"], note["duration"]) for note in score["notes"]])
+
 
 class AudiverisTests(unittest.TestCase):
     def test_runs_full_transcription_and_parses_export(self):

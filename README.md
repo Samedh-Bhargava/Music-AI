@@ -25,6 +25,7 @@ Open `index.html` directly if you only need the score editor. The analysis serve
 - Playback follows notes across the entire score, including measures with no notes at the end.
 - Enter notes or import/export MusicXML and Sonora JSON.
 - Import score photographs or PDFs. The server calls the Audiveris OMR command-line application and imports its MusicXML output.
+- MusicXML import preserves all instrument parts and exported measures, including empty trailing measures. The editor currently combines parts into one editable note list, so part identity and separate instrument playback are not retained.
 - Transcribe WAV, MP3, M4A, FLAC, OGG, and AIFF audio files with Spotify Basic Pitch using stricter onset/frame and note-length settings. There is no application-defined duration or file-size cutoff; available server storage, memory, and host limits remain the practical boundary.
 - The Studio has no application-defined note or measure cap. The **Measures** field supports free-handed completion of incomplete recognition results or scores with skipped/resting passages.
 - Heavy score/audio/video analysis runs one job at a time to limit memory pressure. If another job is active, Sonora returns a clear “try again shortly” message instead of queuing more work.
@@ -47,6 +48,8 @@ The Sonora account is separate from the Supabase dashboard account. Create or si
 ## Confidence and limitations
 
 Audio note scores show mean Basic Pitch model activation. This is an uncalibrated review aid, **not** a probability that a note is correct. Audiveris's MusicXML export does not supply calibrated confidence values, so sheet recognition is explicitly marked as unscored. Review recognized scores before relying on them.
+
+Polyphonic transcription is an estimate, not a guaranteed exact score. Dense ensemble mixes, overlapping instruments, reverberation, and an incorrect tempo or meter can cause missed, merged, or misaligned notes. The supplied tempo and meter determine how audio events are assigned to measures; review those settings and the resulting notes before exporting. For best results, use a clear recording with one prominent instrument.
 
 The app does not separate orchestral sources, perform harmonic verification with a generative AI, infer fingering automatically, or retrieve full copyrighted scores. Chord labels and instrument-range checks in the editor are basic rule-based helpers.
 

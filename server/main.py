@@ -156,8 +156,12 @@ def parse_musicxml(data: bytes, fallback_title: str) -> dict[str, Any]:
     dynamic = "mf"
     notes: list[dict[str, Any]] = []
     highest_exported_measure = 0
-    measures = [element for element in list(first_part) if _local_name(element.tag) == "measure"]
-    for measure_index, measure in enumerate(measures, start=1):
+    # A score-partwise file can contain many instrument parts. Reading only the
+    # first part silently discarded every other instrument in ensemble scores.
+    for part_index, part in enumerate(parts):
+      part_divisions = divisions
+      measures = [element for element in list(part) if _local_name(element.tag) == "measure"]
+      for measure_index, measure in enumerate(measures, start=1):
         raw_number = measure.attrib.get("number", "")
         measure_number = int(raw_number) if raw_number.isdigit() and int(raw_number) > 0 else measure_index
         highest_exported_measure = max(highest_exported_measure, measure_number)
@@ -166,37 +170,37 @@ def parse_musicxml(data: bytes, fallback_title: str) -> dict[str, Any]:
         for item in list(measure):
             kind = _local_name(item.tag)
             if kind == "attributes":
-                divisions = max(1.0, _float(_text(item, "divisions"), divisions))
+                part_divisions = max(1.0, _float(_text(item, "divisions"), part_divisions))
                 key_node = _child(item, "key")
-                if key_node is not None:
+                if key_node is not None and part_index == 0:
                     fifths = int(_float(_text(key_node, "fifths"), 0))
                     mode = _text(key_node, "mode", "major").lower()
                     key = KEY_NAMES.get((fifths, mode), key)
                 time_node = _child(item, "time")
-                if time_node is not None:
+                if time_node is not None and part_index == 0:
                     numerator = max(1, int(_float(_text(time_node, "beats"), numerator)))
                     denominator = max(1, int(_float(_text(time_node, "beat-type"), denominator)))
             elif kind == "direction":
                 per_minute = _child(item, "per-minute")
-                if per_minute is not None:
+                if per_minute is not None and part_index == 0:
                     parsed_tempo = int(_float(per_minute.text or "", tempo))
                     if parsed_tempo >= 1:
                         tempo = parsed_tempo
                 dynamics = next((node for node in item.iter() if _local_name(node.tag) == "dynamics"), None)
-                if dynamics is not None:
+                if dynamics is not None and part_index == 0:
                     marking = next((_local_name(node.tag) for node in list(dynamics)), "")
                     if marking in {"pp", "p", "mp", "mf", "f", "ff"}:
                         dynamic = marking
             elif kind == "sound":
                 parsed_tempo = int(_float(item.attrib.get("tempo", ""), tempo))
-                if parsed_tempo >= 1:
+                if parsed_tempo >= 1 and part_index == 0:
                     tempo = parsed_tempo
             elif kind in {"backup", "forward"}:
-                amount = _float(_text(item, "duration")) / divisions
+                amount = _float(_text(item, "duration")) / part_divisions
                 cursor = max(0.0, cursor + (-amount if kind == "backup" else amount))
                 previous_note_start = None
             elif kind == "note":
-                duration = max(0.0625, _float(_text(item, "duration"), divisions) / divisions)
+                duration = max(0.0625, _float(_text(item, "duration"), part_divisions) / part_divisions)
                 is_chord_note = _child(item, "chord") is not None
                 if _child(item, "rest") is not None:
                     if not is_chord_note:
