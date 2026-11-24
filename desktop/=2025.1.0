@@ -1,0 +1,54 @@
+Collecting fastapi==0.115.12
+  Using cached fastapi-0.115.12-py3-none-any.whl.metadata (27 kB)
+Collecting uvicorn==0.34.0 (from uvicorn[standard]==0.34.0)
+  Using cached uvicorn-0.34.0-py3-none-any.whl.metadata (6.5 kB)
+Collecting python-multipart==0.0.20
+  Using cached python_multipart-0.0.20-py3-none-any.whl.metadata (1.8 kB)
+Requirement already satisfied: httpx==0.28.1 in C:\Users\Samedh Bhargava\AppData\Local\Python\pythoncore-3.15-64\Lib\site-packages (0.28.1)
+Requirement already satisfied: defusedxml==0.7.1 in C:\Users\Samedh Bhargava\AppData\Local\Python\pythoncore-3.15-64\Lib\site-packages (0.7.1)
+Collecting numpy==1.26.4
+  Downloading numpy-1.26.4.tar.gz (15.8 MB)
+     ---------------------------------------- 15.8/15.8 MB 37.9 MB/s  0:00:00
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'done'
+  Getting requirements to build wheel: started
+  Getting requirements to build wheel: finished with status 'done'
+  Installing backend dependencies: started
+  Installing backend dependencies: finished with status 'done'
+  Preparing metadata (pyproject.toml): started
+  Preparing metadata (pyproject.toml): finished with status 'error'
+  error: subprocess-exited-with-error
+  
+  × Preparing metadata (pyproject.toml) did not run successfully.
+  │ exit code: 1
+  ╰─> [17 lines of output]
+      + C:\Users\Samedh Bhargava\AppData\Local\Python\pythoncore-3.15-64\python.exe C:\Users\Samedh Bhargava\AppData\Local\Temp\pip-install-48pte4v3\numpy_1093a9674f0f476c9ffe221de4155b4e\vendored-meson\meson\meson.py setup C:\Users\Samedh Bhargava\AppData\Local\Temp\pip-install-48pte4v3\numpy_1093a9674f0f476c9ffe221de4155b4e C:\Users\Samedh Bhargava\AppData\Local\Temp\pip-install-48pte4v3\numpy_1093a9674f0f476c9ffe221de4155b4e\.mesonpy-bzc5no7m -Dbuildtype=release -Db_ndebug=if-release -Db_vscrt=md --native-file=C:\Users\Samedh Bhargava\AppData\Local\Temp\pip-install-48pte4v3\numpy_1093a9674f0f476c9ffe221de4155b4e\.mesonpy-bzc5no7m\meson-python-native-file.ini
+      'vswhere.exe' is not recognized as an internal or external command,
+      operable program or batch file.
+      The Meson build system
+      Version: 1.2.99
+      Source dir: C:\Users\Samedh Bhargava\AppData\Local\Temp\pip-install-48pte4v3\numpy_1093a9674f0f476c9ffe221de4155b4e
+      Build dir: C:\Users\Samedh Bhargava\AppData\Local\Temp\pip-install-48pte4v3\numpy_1093a9674f0f476c9ffe221de4155b4e\.mesonpy-bzc5no7m
+      Build type: native build
+      Project name: NumPy
+      Project version: 1.26.4
+      Activating VS 18.12.1
+      C compiler for the host machine: cl (msvc 19.52.37029 "Microsoft (R) C/C++ Optimizing Compiler Version 19.52.37029 for x64")
+      C linker for the host machine: link link 14.52.37029.0
+      
+      ..\meson.build:1:0: ERROR: Could not invoke sanity test executable: [WinError 4551] An Application Control policy has blocked this file.
+      
+      A full log can be found at C:\Users\Samedh Bhargava\AppData\Local\Temp\pip-install-48pte4v3\numpy_1093a9674f0f476c9ffe221de4155b4e\.mesonpy-bzc5no7m\meson-logs\meson-log.txt
+      [end of output]
+  
+  note: This error originates from a subprocess, and is likely not a problem with pip.
+
+[notice] A new release of pip is available: 26.2.2 -> 26.3
+[notice] To update, run: C:\Users\Samedh Bhargava\AppData\Local\Python\pythoncore-3.15-64\python.exe -m pip install --upgrade pip
+error: metadata-generation-failed
+
+× Encountered error while generating package metadata.
+╰─> numpy
+
+note: This is an issue with the package mentioned above, not pip.
+hint: See above for details.

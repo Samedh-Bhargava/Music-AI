@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import asyncio
 import csv
 import importlib.util
@@ -10,6 +11,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 import zipfile
@@ -23,11 +25,35 @@ import httpx
 import numpy as np
 from defusedxml import ElementTree as SafeXML
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, Query, Request, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from starlette.concurrency import run_in_threadpool
+from fastapi.staticfiles import StaticFiles
 
 
-ROOT = Path(__file__).resolve().parent.parent
+def parse_args():
+    parser = argparse.ArgumentParser(description='Sonora Local Music AI Server')
+    parser.add_argument('--port', type=int, default=8000, help='Port to run the server on')
+    parser.add_argument('--host', type=str, default='0.0.0.0', help='Host to bind to')
+    parser.add_argument('--desktop', action='store_true', help='Run in desktop app mode')
+    parser.add_argument('--root', type=str, default='', help='Root directory for frontend files')
+    return parser.parse_args()
+
+
+args = parse_args()
+
+# Determine root path - in desktop mode, resources are in different locations
+if args.root:
+    ROOT = Path(args.root)
+elif args.desktop and getattr(sys, 'frozen', False):
+    # Running in a PyInstaller bundle
+    ROOT = Path(sys._MEIPASS)
+elif args.desktop:
+    # Running in development desktop mode - project root
+    ROOT = Path(__file__).resolve().parent.parent.parent
+else:
+    # Running in Docker/server mode
+    ROOT = Path(__file__).resolve().parent.parent
+
 SUPABASE_URL = "https://wltervpxulekpwsxrope.supabase.co"
 SUPABASE_PUBLIC_KEY = "sb_publishable_hweBVG6gVkRyfGc2O2DG8Q_MXl0QGxR"
 ALLOWED_IMAGE = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".pdf"}
@@ -594,10 +620,60 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="Sonora Local Music AI", version="1.0.0", lifespan=lifespan)
 
+# Mount static files - handle both desktop and server modes
+static_dir = ROOT / "static"
+if static_dir.exists():
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+# In desktop mode, bind to localhost only for security
+if args.desktop:
+    args.host = "127.0.0.1"
+
 
 @app.get("/")
-async def index() -> FileResponse:
+async def landing_page() -> FileResponse:
+    return FileResponse(ROOT / "landing.html", media_type="text/html")
+
+
+@app.get("/studio")
+async def studio_page() -> FileResponse:
     return FileResponse(ROOT / "index.html", media_type="text/html")
+
+
+@app.get("/manifest.webmanifest")
+async def app_manifest() -> FileResponse:
+    return FileResponse(ROOT / "manifest.webmanifest", media_type="application/manifest+json")
+
+
+@app.get("/sw.js")
+async def service_worker() -> FileResponse:
+    return FileResponse(ROOT / "sw.js", media_type="application/javascript", headers={"Service-Worker-Allowed": "/"})
+
+# Desktop app download endpoint
+@app.get("/desktop/download")
+async def download_desktop(request: Request, platform: str | None = Query(default=None)) -> RedirectResponse:
+    """Send the visitor directly to the matching installer in this repository's latest release."""
+    requested_platform = (platform or "").casefold()
+    if not requested_platform:
+        user_agent = request.headers.get("user-agent", "").casefold()
+        if "macintosh" in user_agent or "mac os" in user_agent:
+            requested_platform = "macos"
+        elif "linux" in user_agent:
+            requested_platform = "linux"
+        else:
+            requested_platform = "windows"
+    if requested_platform in {"win", "win32", "windows"}:
+        asset = "Sonora-Setup.exe"
+    elif requested_platform in {"mac", "macos", "darwin"}:
+        asset = "Sonora-macOS.dmg"
+    elif requested_platform in {"linux", "ubuntu"}:
+        asset = "Sonora-Linux.AppImage"
+    else:
+        raise HTTPException(status_code=400, detail="Choose a supported installer platform: windows, macos, or linux.")
+    return RedirectResponse(
+        url=f"https://github.com/Samedh-Bhargava/Music-AI/releases/latest/download/{asset}",
+        status_code=302,
+    )
 
 
 @app.get("/api/health")
@@ -953,3 +1029,8 @@ async def transcribe_youtube(
 
 if not (ROOT / "index.html").is_file():
     raise RuntimeError(f"Sonora frontend was not found at {ROOT / 'index.html'}.")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host=args.host, port=args.port, log_level="info")

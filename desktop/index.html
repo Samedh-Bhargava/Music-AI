@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7f4">
+  <meta name="description" content="Create, edit, play, and export music scores in your browser.">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Sonora">
+  <title>Sonora — Music score studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" aria-label="Main navigation">
+      <a class="brand" href="#" aria-label="Sonora Studio home">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M9 18V5l11-2v13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="6" cy="18" rx="3" ry="2.2" fill="currentColor"/><ellipse cx="17" cy="16" rx="3" ry="2.2" fill="currentColor"/></svg></span>
+        <span>sonora</span>
+      </a>
+      <button class="new-button" type="button" data-action="new-project"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>New score</button>
+      <div class="side-label">Workspace</div>
+      <nav class="nav" aria-label="Workspace">
+        <button class="nav-item active" type="button" data-view="studio" aria-label="Studio"><svg viewBox="0 0 24 24" fill="none"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H10v7H4V5.5ZM14 4h4.5A1.5 1.5 0 0 1 20 5.5V9h-6V4ZM4 15h6v5H5.5A1.5 1.5 0 0 1 4 18.5V15ZM14 13h6v5.5a1.5 1.5 0 0 1-1.5 1.5H14v-7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span>Studio</span></button>
+        <button class="nav-item" type="button" data-view="library" aria-label="My scores"><svg viewBox="0 0 24 24" fill="none"><path d="M5 4.5h11.5L20 8v11.5H5V4.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M15.5 4.5V9H20M8 13h9M8 16h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>My scores</span></button>
+        <button class="nav-item" type="button" data-view="practice" aria-label="Practice"><svg viewBox="0 0 24 24" fill="none"><path d="M9 18V5l11-2v13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="6" cy="18" rx="3" ry="2.2" fill="currentColor"/><ellipse cx="17" cy="16" rx="3" ry="2.2" fill="currentColor"/></svg><span>Practice</span></button>
+        <button class="nav-item" type="button" data-view="discover" aria-label="Discover"><svg viewBox="0 0 24 24" fill="none"><circle cx="10.8" cy="10.8" r="6.8" stroke="currentColor" stroke-width="1.6"/><path d="m16 16 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Discover</span></button>
+      </nav>
+      <div class="side-label">Recent scores</div>
+      <div class="side-projects" id="recent-projects"></div>
+      <div class="sidebar-note"><b>Saved on this device.</b><br>Your scores stay in this browser. Export a backup JSON to move them.</div>
+    </aside>
+    <main>
+      <header class="topbar">
+        <div class="crumb">Sonora&nbsp; / &nbsp;<b id="breadcrumb">Studio</b></div>
+        <div class="top-actions">
+          <span class="save-state" id="save-state" role="status">Saved on this device</span>
+          <span class="ai-status offline" id="ai-status">Local AI offline</span>
+          <button class="button" type="button" data-action="open-cloud" id="cloud-account-button">Sign in</button>
+          <button class="button" type="button" data-action="open-analysis">Analyze</button>
+          <button class="button" type="button" data-action="import" aria-label="Import score"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14.5v4A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5v-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Import</span></button>
+          <button class="button primary" type="button" data-action="export-menu" aria-label="Export score"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4v12m0 0 4-4m-4 4-4-4M5 20h14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Export</span></button>
+        </div>
+      </header>
+      <div class="content" id="view-root"></div>
+    </main>
+  </div>
+  <dialog id="project-dialog">
+    <form id="project-form">
+      <div class="dialog-head"><h2>Create a score</h2><button class="icon-button" type="button" data-action="close-dialog" aria-label="Close">×</button></div>
+      <div class="dialog-body">
+        <label>Score title<input id="new-title" name="title" maxlength="100" required value="Untitled score"></label>
+        <label>Instrument<select id="new-instrument" name="instrument"><option value="Piano">Piano</option><option value="Guitar">Guitar</option><option value="Violin">Violin</option><option value="Flute">Flute</option><option value="Other">Other / ensemble</option></select></label>
+        <p class="dialog-help">Start with an empty score. Add notes by hand, or import a MusicXML or Sonora JSON file.</p>
+        <div class="error-text" id="project-error" role="status"></div>
+      </div>
+      <div class="dialog-foot"><button class="button" type="button" data-action="close-dialog">Cancel</button><button class="button primary" type="submit">Create score</button></div>
+    </form>
+  </dialog>
+  <dialog id="delete-dialog">
+    <div class="dialog-head"><h2>Delete this score?</h2><button class="icon-button" type="button" data-action="cancel-delete" aria-label="Close">×</button></div>
+    <div class="dialog-body"><p class="delete-message" id="delete-message">This score will be removed from this browser.</p><p class="dialog-help">This cannot be undone. Export a Sonora backup first if you want to keep a copy.</p></div>
+    <div class="dialog-foot"><button class="button" type="button" data-action="cancel-delete">Keep score</button><button class="button danger" type="button" data-action="confirm-delete">Delete score</button></div>
+  </dialog>
+  <dialog id="cloud-dialog">
+    <div class="dialog-head"><h2>Account &amp; cloud scores</h2><button class="icon-button" type="button" data-action="close-dialog" aria-label="Close">×</button></div>
+    <div class="dialog-body">
+      <p class="dialog-help">Create or sign in to a Sonora account to sync scores across your devices. This email/password account is separate from your Supabase dashboard login.</p>
+      <section class="analysis-section">
+        <h3 id="cloud-auth-heading">Sign in or create an account</h3>
+        <div class="cloud-form">
+          <label>Email<input id="cloud-email" type="email" autocomplete="email" maxlength="254" required placeholder="you@example.com"></label>
+          <label>Password<input id="cloud-password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required placeholder="At least 8 characters"></label>
+          <div class="cloud-actions">
+            <button class="button primary" type="button" data-action="cloud-sign-in">Sign in</button>
+            <button class="button" type="button" data-action="cloud-sign-up">Create account</button>
+            <button class="button" type="button" data-action="cloud-reset-password">Reset password</button>
+          </div>
+        </div>
+      </section>
+      <section class="analysis-section">
+        <h3>Cloud library</h3>
+        <div class="cloud-status" id="cloud-status" role="status">Not connected. Your current scores remain saved on this device.</div>
+        <div class="cloud-actions"><button class="button" type="button" data-action="cloud-sync">Sync now</button><button class="button danger" type="button" data-action="cloud-sign-out">Sign out</button></div>
+        <div class="error-text" id="cloud-error" role="status"></div>
+      </section>
+    </div>
+    <div class="dialog-foot"><button class="button" type="button" data-action="close-dialog">Done</button></div>
+  </dialog>
+  <dialog id="analysis-dialog">
+    <div class="dialog-head"><h2>Analyze with local AI</h2><button class="icon-button" type="button" data-action="close-dialog" aria-label="Close">×</button></div>
+    <div class="dialog-body">
+      <p class="dialog-help">Choose one clear file, confirm the tempo and time signature, then let Sonora prepare an editable score. Results may need small corrections; you can review, edit, transpose, play, and export every detected note.</p>
+      <section class="analysis-section">
+        <h3>Choose input and settings</h3>
+        <label class="file-label"><span id="analysis-file-label">Choose score image or PDF</span><input id="analysis-file" type="file" accept="image/*,.pdf"></label>
+        <div class="analysis-settings">
+          <label>Input type<select id="analysis-kind"><option value="score">Sheet image / PDF</option><option value="audio">Audio recording</option><option value="video">Video performance</option></select></label>
+          <label>Tempo · BPM<input id="analysis-tempo" type="number" min="1" value="120"></label>
+          <label>Time signature<select id="analysis-meter"><option>4/4</option><option>3/4</option><option>2/4</option><option>6/8</option><option>5/4</option><option>7/8</option></select></label>
+          <label>Instrument<select id="analysis-instrument"><option>Piano</option><option>Guitar</option><option>Violin</option><option>Flute</option><option>Other</option></select></label>
+        </div>
+        <button class="button primary" type="button" data-action="run-analysis">Recognize score</button>
+        <div class="error-text" id="analysis-error" role="status"></div>
+      </section>
+    </div>
+    <div class="dialog-foot"><button class="button" type="button" data-action="close-dialog">Close</button></div>
+  </dialog>
+  <dialog id="import-dialog">
+    <div class="dialog-head"><h2>Import a score</h2><button class="icon-button" type="button" data-action="close-dialog" aria-label="Close">×</button></div>
+    <div class="dialog-body">
+      <p class="dialog-help">Import an uncompressed MusicXML (.musicxml or .xml) score, or a Sonora JSON backup. These files are read in this browser and are not uploaded. Use <b>Analyze</b> for score images/PDFs or audio.</p>
+      <label class="file-label">Choose MusicXML or JSON file<input id="import-file" type="file" accept=".musicxml,.xml,.json,application/vnd.recordare.musicxml+xml,application/json"></label>
+      <div class="import-divider">OR ENTER A NOTE SEQUENCE</div>
+      <label for="sequence-input">Notes in order<input id="sequence-input" type="text" placeholder="C4:1 D4:1 E4:1 G4:2"></label>
+      <p class="dialog-help">Use note names and durations in quarter-note beats, for example: C4:1 D4:0.5 E♭4:1.5. Imported notes go into the current score.</p>
+      <div class="error-text" id="import-error" role="status"></div>
+    </div>
+    <div class="dialog-foot"><button class="button" type="button" data-action="close-dialog">Cancel</button><button class="button primary" type="button" data-action="import-sequence">Add notes</button></div>
+  </dialog>
+  <dialog id="export-dialog">
+    <div class="dialog-head"><h2>Export your score</h2><button class="icon-button" type="button" data-action="close-dialog" aria-label="Close">×</button></div>
+    <div class="dialog-body">
+      <p class="dialog-help">Choose an interoperable file format. MIDI and MusicXML preserve note pitches, measures, timing, dynamics, and score settings.</p>
+      <button class="button" type="button" data-action="export-musicxml">Download MusicXML (.musicxml)</button>
+      <button class="button" type="button" data-action="export-midi">Download MIDI (.mid)</button>
+      <button class="button" type="button" data-action="export-json">Download Sonora backup (.json)</button>
+      <button class="button" type="button" data-action="print">Print / Save as PDF</button>
+      <div class="error-text" id="export-error" role="status"></div>
+    </div>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <script src="/static/site.js" defer></script>
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

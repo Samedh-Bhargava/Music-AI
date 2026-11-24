@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7f4">
+  <meta name="description" content="A private music workspace for turning scores and recordings into playable, editable music.">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <title>Sonora — Music, made playable</title>
+  <style>
+    :root { color-scheme: light; --ink:#1d2925; --muted:#657068; --line:#e5eae4; --paper:#fff; --wash:#f5f7f4; --green:#2f7459; --deep:#245c46; --soft:#eaf3ed; font-family:"DM Sans",sans-serif; font-synthesis:none; text-rendering:optimizeLegibility; -webkit-font-smoothing:antialiased }
+    * { box-sizing:border-box }
+    body { min-width:320px; margin:0; background:var(--wash); color:var(--ink) }
+    a { color:inherit }
+    button:focus-visible,a:focus-visible { outline:3px solid #86b89d; outline-offset:3px }
+    .wrap { width:min(1120px,calc(100% - 40px)); margin-inline:auto }
+    .top { display:flex; height:76px; align-items:center; justify-content:space-between }
+    .brand { display:flex; align-items:center; gap:10px; font:800 22px Manrope,sans-serif; letter-spacing:-1px; text-decoration:none }
+    .mark { display:grid; width:36px; height:36px; place-items:center; border-radius:11px; background:var(--green); color:#fff }
+    .mark svg { width:21px }
+    .top-actions { display:flex; align-items:center; gap:10px }
+    .engine { display:flex; align-items:center; gap:8px; color:#68736c; font-size:12px }
+    .dot { width:8px; height:8px; border-radius:50%; background:#d4a359 }
+    .dot.ready { background:#57a273 }
+    .button { display:inline-flex; min-height:42px; align-items:center; justify-content:center; padding:0 16px; border:1px solid #dfe5df; border-radius:8px; background:#fff; color:#425047; cursor:pointer; font:600 13px "DM Sans",sans-serif; text-decoration:none; transition:transform .16s,background .16s }
+    .button:hover { transform:translateY(-1px); border-color:#abc7b2 }
+    .button.primary { border-color:var(--green); background:var(--green); color:white }
+    .button.primary:hover { background:var(--deep) }
+    .hero { display:grid; min-height:490px; grid-template-columns:1.05fr .95fr; align-items:center; gap:40px; padding:45px 0 55px }
+    .eyebrow { color:var(--green); font-size:12px; font-weight:700; letter-spacing:1.6px; text-transform:uppercase }
+    h1 { max-width:620px; margin:14px 0 16px; font:700 clamp(42px,6vw,68px)/1.04 Manrope,sans-serif; letter-spacing:-3.5px }
+    .hero-copy { max-width:510px; margin:0; color:var(--muted); font-size:17px; line-height:1.7 }
+    .hero-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:27px }
+    .privacy { display:flex; align-items:center; gap:8px; margin-top:22px; color:#77827a; font-size:12px }
+    .privacy svg { width:15px; color:var(--green) }
+    .art { position:relative; display:grid; min-height:350px; place-items:center; overflow:hidden; border:1px solid #dfe8de; border-radius:30px; background:radial-gradient(circle at 72% 27%,#edf5eb 0 16%,transparent 17%),linear-gradient(145deg,#e6efe6,#f7f8f4 60%,#e9f1e8) }
+    .art::before,.art::after { position:absolute; width:390px; height:390px; border:1px solid rgba(66,116,83,.12); border-radius:50%; content:"" }
+    .art::after { width:300px; height:300px }
+    .score-card { position:relative; z-index:1; width:min(360px,80%); padding:24px 22px; transform:rotate(-4deg); border:1px solid #e0e6df; border-radius:14px; background:rgba(255,255,255,.94); box-shadow:0 24px 60px rgba(40,70,49,.16) }
+    .score-title { margin-bottom:20px; color:#31483a; font:600 14px Manrope,sans-serif }
+    .staff { position:relative; height:76px; margin:13px 0; background:repeating-linear-gradient(to bottom,transparent 0 12px,#d7ddd6 13px,#d7ddd6 14px) }
+    .staff svg { position:absolute; inset:0; width:100%; height:100%; overflow:visible }
+    .score-caption { display:flex; justify-content:space-between; margin-top:20px; color:#7c887e; font-size:11px }
+    .play-pill { position:absolute; z-index:2; right:11%; bottom:15%; display:flex; align-items:center; gap:9px; padding:13px 17px; border:1px solid #e4eae2; border-radius:12px; background:#fff; box-shadow:0 12px 35px rgba(40,70,49,.12); color:#415248; font-size:12px }
+    .play-icon { display:grid; width:27px; height:27px; place-items:center; border-radius:50%; background:var(--green); color:#fff }
+    .section { padding:20px 0 60px }
+    .section-head { margin-bottom:20px }
+    .section-head h2 { margin:0 0 7px; font:700 25px Manrope,sans-serif; letter-spacing:-.8px }
+    .section-head p { margin:0; color:var(--muted); font-size:14px; line-height:1.6 }
+    .features { display:grid; grid-template-columns:repeat(3,1fr); gap:13px }
+    .feature { min-height:170px; padding:20px; border:1px solid var(--line); border-radius:12px; background:var(--paper) }
+    .feature-icon { display:grid; width:36px; height:36px; place-items:center; margin-bottom:16px; border-radius:10px; background:var(--soft); color:var(--green); font-size:18px }
+    .feature h3 { margin:0 0 7px; font:700 14px Manrope,sans-serif }
+    .feature p { margin:0; color:var(--muted); font-size:13px; line-height:1.6 }
+    .bottom { display:flex; align-items:center; justify-content:space-between; gap:20px; margin:8px 0 35px; padding:22px 24px; border:1px solid #dfe8de; border-radius:14px; background:#eef4ed }
+    .bottom h2 { margin:0 0 5px; font:700 18px Manrope,sans-serif }
+    .bottom p { margin:0; color:var(--muted); font-size:13px }
+    footer { padding:20px 0 28px; border-top:1px solid var(--line); color:#7b857e; font-size:11px }
+    .hidden { display:none !important }
+    @media(max-width:760px) { .wrap{width:min(100% - 30px,560px)} .top{height:66px}.engine{display:none}.hero{grid-template-columns:1fr;gap:30px;padding:42px 0 35px}.hero-copy{font-size:15px}.art{min-height:300px}.features{grid-template-columns:1fr}.feature{min-height:unset}.bottom{align-items:flex-start;flex-direction:column} }
+    @media(max-width:420px) { .wrap{width:calc(100% - 24px)} h1{letter-spacing:-2px}.brand{font-size:20px}.top-actions .button{min-height:38px;padding:0 10px;font-size:11px}.hero-actions .button{flex:1}.art{min-height:260px;border-radius:20px}.play-pill{right:5%;bottom:10%} }
+    @media(prefers-reduced-motion:reduce) { *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important} }
+  </style>
+</head>
+<body>
+  <header class="top wrap">
+    <a class="brand" href="/" aria-label="Sonora home"><span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M9 18V5l11-2v13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><ellipse cx="6" cy="18" rx="3" ry="2.2" fill="currentColor"/><ellipse cx="17" cy="16" rx="3" ry="2.2" fill="currentColor"/></svg></span>sonora</a>
+    <div class="top-actions"><span class="engine"><i class="dot" id="engine-dot"></i><span id="engine-status">Checking local AI…</span></span><button id="install-button" class="button hidden" type="button">Install app</button><a class="button" href="/studio">Open studio</a></div>
+  </header>
+  <main class="wrap">
+    <section class="hero" aria-labelledby="hero-title">
+      <div><div class="eyebrow">Your local music workspace</div><h1 id="hero-title">Make every note playable.</h1><p class="hero-copy">Turn sheet music, recordings, and performances into scores you can edit, practice, and take with you. Your analysis runs locally on this computer.</p><div class="hero-actions"><a class="button primary" href="/studio">Open Sonora Studio <span aria-hidden="true">→</span></a><button id="install-hero" class="button hidden" type="button">Install the app</button></div><div class="privacy"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.9 8 7 10 4.1-2 7-5.4 7-10V6l-7-3Z" stroke="currentColor" stroke-width="1.7"/><path d="m9 12 2 2 4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>Local processing. Your uploaded files are temporary.</div></div>
+      <div class="art" aria-label="Illustration of a music score and playback controls" role="img"><div class="score-card"><div class="score-title">A score, ready to explore</div><div class="staff"><svg viewBox="0 0 320 76" aria-hidden="true"><g fill="#34443a"><ellipse cx="60" cy="51" rx="7" ry="5" transform="rotate(-20 60 51)"/><ellipse cx="106" cy="27" rx="7" ry="5" transform="rotate(-20 106 27)"/><ellipse cx="153" cy="39" rx="7" ry="5" transform="rotate(-20 153 39)"/><ellipse cx="200" cy="15" rx="7" ry="5" transform="rotate(-20 200 15)"/><ellipse cx="247" cy="51" rx="7" ry="5" transform="rotate(-20 247 51)"/><path d="M66 51V15M112 27V63M159 39V3M206 15V51M253 51V15" stroke="#34443a" stroke-width="2" fill="none"/></g></svg></div><div class="staff"><svg viewBox="0 0 320 76" aria-hidden="true"><g fill="#577864"><ellipse cx="53" cy="39" rx="7" ry="5" transform="rotate(-20 53 39)"/><ellipse cx="102" cy="51" rx="7" ry="5" transform="rotate(-20 102 51)"/><ellipse cx="151" cy="27" rx="7" ry="5" transform="rotate(-20 151 27)"/><ellipse cx="201" cy="39" rx="7" ry="5" transform="rotate(-20 201 39)"/><ellipse cx="254" cy="15" rx="7" ry="5" transform="rotate(-20 254 15)"/><path d="M59 39V3M108 51V15M157 27V63M207 39V3M260 15V51" stroke="#577864" stroke-width="2" fill="none"/></g></svg></div><div class="score-caption"><span>Editable notation</span><span>Measure 24</span></div></div><div class="play-pill"><span class="play-icon">▶</span><span>Listen, adjust, repeat</span></div></div>
+    </section>
+    <section class="section" aria-labelledby="features-title"><div class="section-head"><h2 id="features-title">One place for the whole piece</h2><p>Open the same Sonora studio you already know, now with a simple starting point.</p></div><div class="features"><article class="feature"><div class="feature-icon" aria-hidden="true">♬</div><h3>Read and edit scores</h3><p>Recognize printed sheet music, import MusicXML, correct notes, and keep every measure in one score.</p></article><article class="feature"><div class="feature-icon" aria-hidden="true">◖</div><h3>Listen and practice</h3><p>Transcribe audio and video, play a score, slow it down, loop a passage, or isolate either hand.</p></article><article class="feature"><div class="feature-icon" aria-hidden="true">⇧</div><h3>Keep your music close</h3><p>Save scores on this device, optionally sync an account, and export MIDI, MusicXML, or a Sonora backup.</p></article></div></section>
+    <section class="bottom"><div><h2>Ready to work on a piece?</h2><p>Open the studio to create, import, analyze, or practice a score.</p></div><a class="button primary" href="/studio">Go to the studio →</a></section>
+  </main>
+  <footer class="wrap">Sonora · Local music tools for listening, learning, and editing.</footer>
+  <script src="/static/site.js" defer></script>
+</body>
+</html>

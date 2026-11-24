@@ -1,0 +1,15 @@
+{
+  "id": "/",
+  "name": "Sonora Music Studio",
+  "short_name": "Sonora",
+  "description": "A local music workspace for scores, recordings, and practice.",
+  "start_url": "/studio",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#f5f7f4",
+  "theme_color": "#2f7459",
+  "icons": [
+    { "src": "/static/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -26,6 +26,10 @@ RUN python -m pip install --upgrade pip \
     && python -m pip install -r /app/server/requirements.txt
 
 COPY index.html /app/index.html
+COPY landing.html /app/landing.html
+COPY manifest.webmanifest /app/manifest.webmanifest
+COPY sw.js /app/sw.js
+COPY static /app/static
 COPY server /app/server
 RUN useradd --create-home --home-dir /home/sonora --shell /usr/sbin/nologin sonora \
     && chown -R sonora:sonora /app /home/sonora

@@ -1,0 +1,12 @@
+.git
+.venv/
+__pycache__/
+*.py[cod]
+*.mid
+*.musicxml
+*.mxl
+
+# Generated desktop dependencies and packaged application output
+desktop/node_modules/
+desktop/python/dist/
+desktop/dist/

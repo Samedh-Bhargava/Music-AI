@@ -1,0 +1,162 @@
+{
+  "name": "sonora-desktop",
+  "version": "1.0.0",
+  "description": "Sonora - Music score studio desktop app",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "build:python": "python build/python_bundle.py",
+    "postinstall": "npm run build:python"
+  },
+  "author": "Samedh Bhargava",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^45.4.1",
+    "electron-builder": "^24.13.3"
+  },
+  "dependencies": {
+    "electron-updater": "^6.1.7",
+    "get-port-sync": "^1.0.1"
+  },
+  "build": {
+    "appId": "com.sonora.musicstudio",
+    "productName": "Sonora",
+    "publish": {
+      "provider": "github",
+      "owner": "Samedh-Bhargava",
+      "repo": "Music-AI",
+      "releaseType": "release"
+    },
+    "copyright": "Copyright © 2024 Samedh Bhargava",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "electron/**/*",
+      "!**/node_modules/**/*",
+      "!**/.git/**/*",
+      "!**/__pycache__/**/*",
+      "!**/*.pyc",
+      "!**/tests/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "python/dist",
+        "to": "python",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "server",
+        "to": "server",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "static",
+        "to": "static",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "index.html",
+        "to": "index.html"
+      },
+      {
+        "from": "landing.html",
+        "to": "landing.html"
+      },
+      {
+        "from": "manifest.webmanifest",
+        "to": "manifest.webmanifest"
+      },
+      {
+        "from": "sw.js",
+        "to": "sw.js"
+      }
+    ],
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Sonora"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Sonora-Setup.${ext}",
+      "icon": "assets/icon.ico",
+      "requestedExecutionLevel": "asInvoker",
+      "signAndEditExecutable": false
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Sonora-macOS.${ext}",
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.music",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "assets/entitlements.mac.plist",
+      "entitlementsInherit": "assets/entitlements.mac.plist"
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ],
+      "window": {
+        "width": 540,
+        "height": 380
+      }
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Sonora-Linux.${ext}",
+      "icon": "assets/icon.png",
+      "category": "AudioVideo",
+      "maintainer": "Samedh Bhargava"
+    },
+    "appImage": {
+      "artifactName": "sonora-${version}-${arch}.AppImage"
+    },
+    "compression": "maximum",
+    "generateUpdatesFilesForAllChannels": false
+  }
+}

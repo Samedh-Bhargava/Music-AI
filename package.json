@@ -1,0 +1,21 @@
+{
+  "name": "music-ai",
+  "version": "1.0.0",
+  "description": "Sonora is a score editor with optional local AI processing and opt-in Supabase accounts for cloud score sync.",
+  "main": "sw.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Samedh-Bhargava/Music-AI.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Samedh-Bhargava/Music-AI/issues"
+  },
+  "homepage": "https://github.com/Samedh-Bhargava/Music-AI#readme"
+}
