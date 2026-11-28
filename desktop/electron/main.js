@@ -1,8 +1,20 @@
-const electron = require('electron');
-const { app, BrowserWindow, ipcMain, Menu, shell, dialog } = electron;
+const fs = require('fs');
+const { app, BrowserWindow, ipcMain, Menu, shell, dialog } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
-const getPort = require('get-port-sync');
+const net = require('net');
+
+function findFreePort() {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.unref();
+    server.on('error', () => resolve(8000));
+    server.listen(0, '127.0.0.1', () => {
+      const port = server.address().port;
+      server.close(() => resolve(port));
+    });
+  });
+}
 
 let mainWindow = null;
 let pythonProcess = null;
@@ -14,14 +26,11 @@ function getPythonExecutable() {
   if (isDev) {
     return path.join(__dirname, '..', 'python', 'dist', 'venv', 'Scripts', 'python.exe');
   }
-
-  const basePath = path.join(process.resourcesPath, 'python', 'dist');
-
+  const basePath = path.join(process.resourcesPath, 'python');
   if (process.platform === 'win32') {
     return path.join(basePath, 'venv', 'Scripts', 'python.exe');
-  } else {
-    return path.join(basePath, 'venv', 'bin', 'python');
   }
+  return path.join(basePath, 'venv', 'bin', 'python');
 }
 
 function getServerScript() {
@@ -39,57 +48,47 @@ function getProjectRoot() {
 }
 
 async function startPythonServer() {
-  return new Promise((resolve, reject) => {
-    const pythonExe = getPythonExecutable();
-    const serverScript = getServerScript();
-    const projectRoot = getProjectRoot();
+  const pythonExe = getPythonExecutable();
+  const serverScript = getServerScript();
+  const projectRoot = getProjectRoot();
 
-    const freePort = getPort();
-    const port = freePort || 8000;
+  const port = await findFreePort() || 8000;
 
-    const args = [serverScript, '--port', port.toString(), '--host', '127.0.0.1', '--desktop', '--root', projectRoot];
+  const args = [serverScript, '--port', port.toString(), '--host', '127.0.0.1', '--desktop', '--root', projectRoot];
 
-    console.log('Starting Python server:', pythonExe, args);
+  pythonProcess = spawn(pythonExe, args, {
+    env: {
+      ...process.env,
+      PYTHONPATH: path.join(projectRoot, 'server'),
+      AUDIVERIS_BIN: path.join(process.resourcesPath, 'python', 'dist', 'audiveris', 'bin', 'Audiveris'),
+      TESSDATA_PREFIX: path.join(process.resourcesPath, 'python', 'dist', 'tessdata'),
+    },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
 
-    pythonProcess = spawn(pythonExe, args, {
-      env: {
-        ...process.env,
-        PYTHONPATH: path.join(projectRoot, 'server'),
-        AUDIVERIS_BIN: path.join(process.resourcesPath, 'python', 'dist', 'audiveris', 'bin', 'Audiveris'),
-        TESSDATA_PREFIX: path.join(process.resourcesPath, 'python', 'dist', 'tessdata'),
-      },
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+  pythonProcess.stdout?.on('data', (data) => {
+    const output = data.toString();
+    console.log('[Python]', output);
+    if (output.includes('Uvicorn running on') || output.includes('Application startup complete') || output.includes('uvicorn')) {
+      pythonPort = port;
+    }
+  });
 
-    pythonProcess.stdout?.on('data', (data) => {
-      const output = data.toString();
-      console.log('[Python]', output);
+  pythonProcess.stderr?.on('data', (data) => {
+    const output = data.toString();
+    console.error('[Python Error]', output);
+    if (output.includes('Uvicorn running on') || output.includes('Application startup complete') || output.includes('uvicorn')) {
+      pythonPort = port;
+    }
+  });
 
-      if (output.includes('Uvicorn running on') || output.includes('Application startup complete')) {
-        pythonPort = port;
-        resolve(port);
-      }
-    });
+  pythonProcess.on('error', (err) => {
+    console.error('Failed to start Python:', err);
+  });
 
-    pythonProcess.stderr?.on('data', (data) => {
-      console.error('[Python Error]', data.toString());
-    });
-
-    pythonProcess.on('error', (err) => {
-      console.error('Failed to start Python:', err);
-      reject(err);
-    });
-
-    pythonProcess.on('exit', (code) => {
-      console.log('Python process exited with code:', code);
-      pythonProcess = null;
-    });
-
-    setTimeout(() => {
-      if (pythonPort === 0) {
-        reject(new Error('Python server startup timeout'));
-      }
-    }, 30000);
+  pythonProcess.on('exit', (code) => {
+    console.log('Python process exited with code:', code);
+    pythonProcess = null;
   });
 }
 
@@ -107,7 +106,6 @@ async function createWindow() {
     console.log('Python server started on port:', pythonPort);
   } catch (err) {
     console.error('Failed to start Python server:', err);
-    dialog.showErrorBox('Startup Error', 'Failed to start local AI service. Some features may not work.');
   }
 
   mainWindow = new BrowserWindow({
@@ -116,7 +114,6 @@ async function createWindow() {
     minWidth: 1000,
     minHeight: 700,
     title: 'Sonora — Music Score Studio',
-    icon: path.join(__dirname, '..', 'assets', process.platform === 'win32' ? 'icon.ico' : 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -124,10 +121,7 @@ async function createWindow() {
       sandbox: true,
       webSecurity: true,
     },
-    show: false,
     backgroundColor: '#f5f7f4',
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
-    trafficLightPosition: process.platform === 'darwin' ? { x: 18, y: 18 } : undefined,
   });
 
   const landingPath = isDev
@@ -135,13 +129,7 @@ async function createWindow() {
     : path.join(process.resourcesPath, 'landing.html');
 
   await mainWindow.loadFile(landingPath);
-
-  mainWindow.once('ready-to-show', () => {
-    mainWindow?.show();
-    if (isDev) {
-      mainWindow?.webContents.openDevTools();
-    }
-  });
+  mainWindow.show();
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -169,52 +157,6 @@ function createMenu() {
           label: 'Open Score...',
           accelerator: 'CmdOrCtrl+O',
           click: () => mainWindow?.webContents.send('menu-action', 'open-score'),
-        },
-        {
-          label: 'Save',
-          accelerator: 'CmdOrCtrl+S',
-          click: () => mainWindow?.webContents.send('menu-action', 'save'),
-        },
-        {
-          label: 'Save As...',
-          accelerator: 'CmdOrCtrl+Shift+S',
-          click: () => mainWindow?.webContents.send('menu-action', 'save-as'),
-        },
-        { type: 'separator' },
-        {
-          label: 'Import Audio...',
-          accelerator: 'CmdOrCtrl+I',
-          click: () => mainWindow?.webContents.send('menu-action', 'import-audio'),
-        },
-        {
-          label: 'Import Video...',
-          click: () => mainWindow?.webContents.send('menu-action', 'import-video'),
-        },
-        {
-          label: 'Import Image (OCR)...',
-          click: () => mainWindow?.webContents.send('menu-action', 'import-image'),
-        },
-        { type: 'separator' },
-        {
-          label: 'Export',
-          submenu: [
-            {
-              label: 'MusicXML',
-              click: () => mainWindow?.webContents.send('menu-action', 'export-musicxml'),
-            },
-            {
-              label: 'MIDI',
-              click: () => mainWindow?.webContents.send('menu-action', 'export-midi'),
-            },
-            {
-              label: 'PDF',
-              click: () => mainWindow?.webContents.send('menu-action', 'export-pdf'),
-            },
-            {
-              label: 'Audio (WAV)',
-              click: () => mainWindow?.webContents.send('menu-action', 'export-audio'),
-            },
-          ],
         },
         { type: 'separator' },
         isMac ? { role: 'close' } : { role: 'quit' },
@@ -297,6 +239,7 @@ function createMenu() {
         { type: 'separator' },
         { role: 'hide' },
         { role: 'hideOthers' },
+        { type: 'separator' },
         { role: 'unhide' },
         { type: 'separator' },
         { role: 'quit' },
@@ -308,7 +251,6 @@ function createMenu() {
   Menu.setApplicationMenu(menu);
 }
 
-// IPC Handlers
 ipcMain.handle('get-python-port', () => pythonPort);
 
 ipcMain.handle('show-open-dialog', async (event, options) => {
@@ -344,8 +286,9 @@ ipcMain.on('menu-action', (event, action) => {
   mainWindow?.webContents.send('menu-action', action);
 });
 
-// App lifecycle
-app.whenReady().then(createWindow);
+app.whenReady().then(async () => {
+  await createWindow();
+});
 
 app.on('window-all-closed', () => {
   stopPythonServer();
@@ -366,4 +309,12 @@ app.on('web-contents-created', (event, contents) => {
     event.preventDefault();
     shell.openExternal(navigationUrl);
   });
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('UNHANDLED REJECTION:', reason);
 });

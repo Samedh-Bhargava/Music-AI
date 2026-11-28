@@ -42,7 +42,11 @@
       "!**/.git/**/*",
       "!**/__pycache__/**/*",
       "!**/*.pyc",
-      "!**/tests/**/*"
+      "!**/tests/**/*",
+      "node_modules/get-port-sync/**/*",
+      "node_modules/get-port/**/*",
+      "node_modules/pinkie-promise/**/*",
+      "node_modules/deasync/**/*"
     ],
     "extraResources": [
       {
